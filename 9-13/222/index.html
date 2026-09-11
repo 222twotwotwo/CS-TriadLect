@@ -1,1 +1,1534 @@
 
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>命令行世界 · 新生计算机基础讲座</title>
+<meta name="description" content="面向计算机新生的入门讲座：Windows 前置环境、Shell 基础命令、Git 版本控制、Neovim 编辑器，以及 C 语言从源码到可执行文件的四步过程。单文件离线页面。">
+<meta name="theme-color" content="#f7f5ef">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23f7f5ef'/><text x='16' y='24' font-family='monospace' font-size='24' font-weight='bold' fill='%23c0402b' text-anchor='middle'>$</text></svg>">
+<script>document.documentElement.className += ' js';</script>
+<style>
+  /* ============================================================
+     设计系统：纸 + 墨 + 一点朱砂
+     只靠三种东西建立秩序——留白、发丝线、代码材质。
+     不做装饰性插画，让终端和文字成为视觉锚点。
+     ============================================================ */
+  :root{
+    --paper:#f7f5ef; --paper-2:#ece9e0;
+    --ink:#17191d; --text:#454b54; --mut:#69707b; --faint:#858b94;
+    --line:#d9d5cb; --line-2:#bcb7ab;
+    --accent:#c0402b; --ok:#3f7a5e; --warn:#a4712a;
+    --code-bg:#20242a; --term-bg:#14171b;
+    --nav-bg:rgba(247,245,239,.88);
+    --mono:ui-monospace,"Cascadia Code","JetBrains Mono",SFMono-Regular,Consolas,Menlo,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+    --col:1120px;
+    --reading-col:760px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#101216; --paper-2:#191c22;
+      --ink:#ecedf1; --text:#c2c8d2; --mut:#9aa2b0; --faint:#7d8593;
+      --line:#24272e; --line-2:#343841;
+      --accent:#e2705a; --ok:#72b191; --warn:#c99a55;
+      --code-bg:#171b21; --term-bg:#0d0f12; --nav-bg:rgba(16,18,22,.88);
+    }
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--paper); color:var(--text);
+    font:16.5px/1.75 var(--sans); -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:rgba(192,64,43,.16)}
+  a{color:inherit;text-decoration:none}
+  a:hover{color:var(--accent)}
+  p{margin:.7em 0}
+  ul,ol{padding-left:1.25em;margin:.7em 0}
+  li{margin:.32em 0}
+  b,strong{color:var(--ink);font-weight:650}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+  /* ---------- 顶栏：一条发丝线 + 阅读进度 ---------- */
+  .nav{
+    position:sticky; top:0; z-index:60;
+    background:var(--nav-bg); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-in{
+    max-width:var(--col); margin:0 auto; padding:0 clamp(18px,5vw,28px);
+    height:52px; display:flex; align-items:center; gap:22px;
+  }
+  .brand{font:700 13px var(--sans);color:var(--ink);white-space:nowrap;letter-spacing:.04em}
+  .nav-links{
+    display:flex; align-items:center; gap:18px; margin-left:auto;
+    overflow-x:auto; scrollbar-width:none;
+  }
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links a{font:12px var(--mono);color:var(--mut);white-space:nowrap;padding:5px 0;position:relative}
+  .nav-links a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-links a:hover::after{transform:scaleX(1)}
+  #progress{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--accent);box-shadow:0 0 16px rgba(192,64,43,.35)}
+
+  /* ---------- 版心 ---------- */
+  .wrap{max-width:var(--col);margin:0 auto;padding:0 clamp(18px,5vw,42px)}
+
+  /* ---------- 开场 ---------- */
+  .hero{
+    min-height:min(820px,calc(100vh - 52px));
+    padding:clamp(70px,8vw,112px) 0 clamp(42px,6vw,72px);
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,.82fr);
+    gap:clamp(44px,8vw,108px);align-items:center;
+  }
+  .hero-copy{min-width:0}
+  .eyebrow{font:12px var(--mono);letter-spacing:.16em;color:var(--accent);text-transform:uppercase}
+  h1{
+    margin:.42em 0 .46em; color:var(--ink); font-weight:700;
+    font-size:clamp(40px,5.5vw,76px); line-height:1.02; letter-spacing:-.022em;
+  }
+  .lede{
+    font-size:clamp(16.5px,1.9vw,18.5px); color:var(--mut);
+    max-width:44ch; margin:0 0 clamp(30px,5vw,44px);line-height:1.72;
+  }
+  .toc{border-top:1px solid var(--line-2);max-width:650px}
+  .toc a{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:baseline;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+  .toc .n{font:12px var(--mono);color:var(--accent);flex:none}
+  .toc .t{font-size:16.5px;font-weight:650;color:var(--ink)}
+  .toc a:hover .t{color:var(--accent)}
+  .toc .d{font:12px var(--mono);color:var(--mut);flex:none}
+  .meta{font:12.5px var(--mono);color:var(--mut);margin-top:26px}
+  .hero-console{position:relative;min-width:0}
+  .hero-console::before{content:"";position:absolute;inset:-18px -18px 18px 18px;border:1px solid var(--line-2);border-radius:7px;transform:rotate(2.2deg);opacity:.65}
+  .hero-console .term{position:relative;margin:0;box-shadow:0 22px 48px rgba(23,25,29,.16)}
+  .hero-console .term-out{height:300px}
+  .hero-console .term-in .hint{display:none}
+  .console-label{display:flex;align-items:center;gap:8px;margin:0 0 12px;font:11px var(--mono);color:var(--mut);letter-spacing:.09em;text-transform:uppercase}
+  .console-label::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(63,122,94,.14)}
+  .console-caption{position:relative;margin:12px 0 0;font:12px/1.6 var(--mono);color:var(--mut)}
+
+  /* ---------- 区块 ---------- */
+  .sec{padding-top:clamp(64px,8vw,108px);scroll-margin-top:12px}
+  .sec-head{border-top:1px solid var(--line-2);padding-top:16px;margin-bottom:clamp(24px,4vw,34px);display:grid;grid-template-columns:62px minmax(0,1fr);column-gap:18px}
+  .sec-head > *:not(.sec-idx){grid-column:2}
+  .sec-idx{font:12px var(--mono);letter-spacing:.14em;color:var(--accent);grid-row:1 / span 3}
+  .sec-head h2{
+    margin:.3em 0 .32em; color:var(--ink); font-weight:700;
+    font-size:clamp(24px,3.2vw,36px); line-height:1.16; letter-spacing:-.012em;
+  }
+  .sec-sub{margin:0;color:var(--mut);font-size:15.5px;max-width:56ch}
+  .blk{max-width:var(--reading-col);border-top:1px solid var(--line);padding-top:24px;margin-top:34px}
+  .sec-head + .blk{border-top:none;padding-top:0;margin-top:0}
+  .blk h3{margin:0 0 8px;font-size:17px;color:var(--ink);font-weight:650;letter-spacing:.01em}
+
+  /* ---------- 表格：只有横线 ---------- */
+  .tbl-wrap{overflow-x:auto;margin:14px 0}
+  .tbl{width:100%;border-collapse:collapse;font-size:14.5px;min-width:420px}
+  .tbl th{
+    text-align:left;padding:7px 0 8px;font:12px var(--mono);font-weight:400;
+    letter-spacing:.08em;color:var(--faint);border-bottom:1px solid var(--line-2);
+  }
+  .tbl td{padding:9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td:first-child{
+    font-family:var(--mono);font-size:13.5px;color:var(--ink);
+    white-space:nowrap;padding-right:22px;
+  }
+  .tbl td + td{color:var(--mut)}
+
+  /* ---------- 代码块 ---------- */
+  .code{
+    margin:16px 0; border:1px solid rgba(255,255,255,.08); border-radius:6px;
+    background:var(--code-bg); overflow:hidden;box-shadow:0 10px 24px rgba(23,25,29,.09);
+  }
+  .c-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:7px 9px 7px 13px; border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .c-lang{font:11px var(--mono);letter-spacing:.12em;color:#9da5b0;text-transform:uppercase}
+  .c-copy{
+    font:11.5px var(--sans); color:#b9c0ca; background:rgba(255,255,255,.03); cursor:pointer;
+    border:1px solid rgba(255,255,255,.16); border-radius:4px; padding:3px 9px;
+  }
+  .c-copy:hover{color:#fff;border-color:rgba(255,255,255,.42)}
+  .c-copy.ok{color:#fff;background:var(--ok);border-color:var(--ok)}
+  .code code{
+    display:block; white-space:pre; overflow-x:auto;
+    padding:17px 18px;
+    font-family:var(--mono); font-size:13.5px; line-height:1.72; color:#e7ebf1;
+    background:none; border:none;
+  }
+  /* 行内代码：不需要任何类名 */
+  p code,li code,td code,.note code,h3 code{
+    font-family:var(--mono);font-size:.87em;color:var(--ink);
+    background:var(--paper-2);border:1px solid var(--line);
+    border-radius:3px;padding:.04em .34em;white-space:nowrap;
+  }
+  /* 高亮配色：两种色相 + 中性色，够用 */
+  .t-cm{color:var(--faint);font-style:italic}
+  .t-k{color:#3f5d8a;font-weight:600}
+  .t-ty{color:#3f5d8a}
+  .t-s{color:#8a5a3c}
+  .t-num{color:#8a5a3c}
+  .t-v{color:#7a5c8a}
+  .t-f{color:#2f6b5e}
+  .t-pr{color:var(--accent);font-weight:700}
+  .t-o,.t-p,.t-c,.t-punc,.t-pp{color:var(--mut)}
+  .code .t-cm{color:#a9d3ad}
+  .code .t-k,.code .t-ty{color:#a8c7f0}
+  .code .t-s,.code .t-num{color:#e7bd8b}
+  .code .t-v{color:#d3afe9}
+  .code .t-f{color:#8dd3ba}
+  .code .t-c{color:#8993a2}
+  .code .t-o,.code .t-p,.code .t-punc,.code .t-pp{color:#b8c0cb}
+  @media (prefers-color-scheme:dark){
+    .t-k,.t-ty{color:#8fb0e0}
+    .t-s,.t-num{color:#d0a17c}
+    .t-v{color:#c0a0d8}
+    .t-f{color:#7fc4ac}
+  }
+
+  /* ---------- 提示：一条左边线，没有底色 ---------- */
+  .note{
+    margin:18px 0; padding:2px 0 2px 16px;
+    border-left:2px solid var(--line-2);
+    color:var(--mut); font-size:14.5px;
+  }
+  .note.good{border-left-color:var(--ok)}
+  .note.warn{border-left-color:var(--warn)}
+  .note.bad{border-left-color:var(--accent)}
+
+  kbd{
+    font:12px var(--mono); color:var(--ink);
+    background:var(--paper-2); border:1px solid var(--line-2);
+    border-radius:3px; padding:1px 5px;
+  }
+
+  /* ---------- 流程：方框 + 箭头 ---------- */
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0}
+  .flow .box{
+    font:13px var(--mono); color:var(--ink);
+    background:var(--paper-2);border:1px solid var(--line-2); border-radius:5px; padding:7px 11px;
+  }
+  .flow .box i{font-style:normal;color:var(--faint);margin-left:7px;font-size:11.5px}
+  .flow .ar{color:var(--faint);font-family:var(--mono);font-size:14px}
+  @media (max-width:520px){.flow .ar{display:none}}
+
+  /* ---------- 真实终端 ---------- */
+  .term{margin:16px 0;border:1px solid rgba(255,255,255,.15);border-radius:7px;overflow:hidden;background:var(--term-bg);box-shadow:0 18px 36px rgba(23,25,29,.15)}
+  .term-bar{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.025)}
+  .term-bar .title{font:11.5px var(--mono);color:#8b93a0;letter-spacing:.06em}
+  .term-bar .badge{
+    margin-left:auto;font:11px var(--mono);color:#8b93a0;
+    border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:1px 9px;
+  }
+  .term-bar .badge.ok{color:#84cfa4;border-color:rgba(132,207,164,.4)}
+  .term-bar .badge.bad{color:#e2705a;border-color:rgba(226,112,90,.42)}
+  .term-btn{
+    font:11.5px var(--sans);color:#c9ced7;background:none;cursor:pointer;
+    border:1px solid rgba(255,255,255,.18);border-radius:3px;padding:2px 9px;
+  }
+  .term-btn:hover{border-color:rgba(255,255,255,.4);color:#fff}
+  .term-out{
+    height:320px;overflow-y:auto;padding:14px 16px;
+    font-family:var(--mono);font-size:12.8px;line-height:1.72;color:#c9ced7;
+  }
+  .term-out .tl{white-space:pre-wrap;word-break:break-word}
+  .term-out .e{color:#ef8b7c}
+  .term-out .o{color:#a8b0bc}
+  .term-out .u{color:#8fce9e}
+  .term-out .c2{color:#8fb6e6}
+  .term-out .hl2{color:#f2f5f9}
+  .term-out .w{color:#e0b06a}
+  .term-out .d{color:#767d8a}
+  .term-in{display:flex;align-items:center;gap:8px;padding:9px 16px 13px;border-top:1px solid rgba(255,255,255,.09)}
+  .term-in .prompt{font-family:var(--mono);font-size:12.8px;color:#d6dbe3;white-space:nowrap}
+  .term-in input{
+    flex:1;min-width:0;background:none;border:none;outline:none;
+    color:#f2f5f9;font-family:var(--mono);font-size:13px;padding:2px 0;caret-color:#8fce9e;
+  }
+  .term-in:focus-within{box-shadow:inset 0 2px 0 rgba(143,206,158,.5)}
+  .term-in .hint{font:11px var(--sans);color:#767d8a;white-space:nowrap}
+  @media (max-width:560px){.term-in .hint{display:none}.term-out{height:260px}}
+
+  /* ---------- 编译流水线 ---------- */
+  .pipe{margin:16px 0}
+  .pipe-row{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}
+  .pstep{
+    flex:1 1 140px;min-width:140px;text-align:left;cursor:pointer;
+    background:var(--paper-2);border:1px solid var(--line);border-radius:5px;
+    padding:10px 12px;color:var(--mut);
+    font-family:var(--sans);
+  }
+  .pstep:hover{border-color:var(--faint)}
+  .pstep.on{border-color:var(--accent);color:var(--ink);box-shadow:inset 3px 0 0 var(--accent)}
+  .pstep .pi{font:11px var(--mono);color:var(--faint)}
+  .pstep.on .pi{color:var(--accent)}
+  .pstep b{display:block;font-size:15px;margin:3px 0 1px;color:inherit}
+  .pstep i{font-style:normal;display:block;font:11.5px var(--mono);color:var(--faint)}
+  .parrow{align-self:center;color:var(--faint);font-size:15px}
+  .pipe-panel{border-top:1px solid var(--line);margin-top:20px;padding-top:18px}
+  .pipe-panel .ph{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .pipe-panel .ph h4{margin:0;font-size:18px;color:var(--ink)}
+  .pipe-panel .ph .b2{font:11px var(--mono);color:var(--accent);letter-spacing:.1em}
+  .pipe-panel .ph small{font:12px var(--mono);color:var(--faint)}
+  .pipe-panel .pd{color:var(--mut);font-size:15px;margin:10px 0 6px}
+  .pipe-what{margin:6px 0;padding-left:1.2em;color:var(--mut);font-size:14.5px}
+  .pipe-hint{font-size:13px;color:var(--faint);margin-top:10px}
+  @media (max-width:520px){.parrow{display:none}}
+
+  /* ---------- 页脚 ---------- */
+  footer.site{
+    margin-top:clamp(60px,10vw,110px);padding:20px 0 60px;
+    border-top:1px solid var(--line-2);
+    display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    font:12.5px var(--mono);color:var(--mut);
+  }
+
+  /* ---------- 悬浮按键显示 ---------- */
+  .kfloat{
+    position:fixed;right:16px;bottom:16px;z-index:120;
+    max-width:min(400px,calc(100vw - 32px));
+    display:flex;flex-direction:column;align-items:flex-end;
+    background:var(--nav-bg);backdrop-filter:blur(12px);
+    border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 24px rgba(23,25,29,.12);
+    font-size:12px;cursor:grab;user-select:none;touch-action:none;
+  }
+  .kfloat:active{cursor:grabbing}
+  .kf-head{display:flex;align-items:center;gap:10px;padding:8px 10px 6px;color:var(--faint)}
+  .kf-title{color:var(--mut)}
+  .kf-count{font-family:var(--mono);color:var(--accent)}
+  .kf-btn{
+    font:inherit;color:var(--mut);background:none;cursor:pointer;
+    border:1px solid var(--line);border-radius:3px;padding:1px 7px;
+  }
+  .kf-btn:hover{color:var(--ink);border-color:var(--faint)}
+  .kf-body{
+    display:flex;flex-wrap:nowrap;align-items:baseline;justify-content:flex-end;
+    gap:8px;padding:0 12px 12px;overflow:hidden;min-height:60px;
+  }
+  .kf-empty{color:var(--faint);font-size:12px;line-height:1.7;margin:auto;text-align:right}
+  .kfloat.mini .kf-body{display:none}
+  .kfloat.mini .kf-title,.kfloat.mini .kf-count,.kfloat.mini #kfClear{display:none}
+  .key-chip{
+    font-family:var(--mono);font-size:40px;line-height:1;color:var(--ink);
+    white-space:nowrap;animation:keypop .13s ease;transition:opacity .5s ease;
+  }
+  .key-chip.sp{color:var(--mut)}
+  .key-chip.mod{color:#3f5d8a;font-size:26px}
+  .key-chip.del{color:var(--accent)}
+  @keyframes keypop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+  @media (prefers-reduced-motion:reduce){.key-chip{animation:none;transition:none}}
+  @media (max-width:560px){
+    .kfloat{max-width:200px}
+    .kf-body{display:none}
+    .key-chip{font-size:32px}
+  }
+
+  /* ---------- 滚动显现 ---------- */
+  html.js .reveal{opacity:0;transform:translateY(8px);transition:opacity .45s ease,transform .45s ease}
+  html.js .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){
+    html.js .reveal{opacity:1;transform:none;transition:none}
+  }
+
+  .noscript{
+    position:fixed;left:0;right:0;bottom:0;z-index:100;padding:10px;text-align:center;
+    background:var(--paper-2);border-top:1px solid var(--accent);color:var(--ink);font-size:13.5px;
+  }
+
+  @media (max-width:560px){
+    body{font-size:16px}
+    .brand{display:none}
+    .nav-in{gap:0}
+    .tbl{min-width:0}
+    .tbl td:first-child{white-space:normal;padding-right:14px}
+    .code code{font-size:12.5px}
+    .hero{display:block;min-height:0;padding-top:54px}
+    .hero-console{margin:42px 10px 0}
+    .hero-console::before{inset:-10px -10px 10px 10px}
+    .hero-console .term-out{height:240px}
+    .sec-head{grid-template-columns:38px minmax(0,1fr);column-gap:10px}
+    .sec-head > *:not(.sec-idx){grid-column:2}
+    .sec-idx{font-size:11px}
+    .blk{margin-top:28px;padding-top:20px}
+    .toc .d{font-size:11px}
+  }
+
+  @media (min-width:561px) and (max-width:980px){
+    .hero{grid-template-columns:minmax(0,1fr) minmax(300px,.75fr);gap:34px}
+    .hero-console .term-out{height:260px}
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-in">
+    <span class="brand">命令行世界</span>
+    <nav class="nav-links">
+      <a href="#setup">准备</a>
+      <a href="#shell">Shell</a>
+      <a href="#git">Git</a>
+      <a href="#nvim">Neovim</a>
+      <a href="#cc">C 编译</a>
+      <a href="#road">路线</a>
+    </nav>
+  </div>
+  <div id="progress"></div>
+</div>
+
+<main>
+<div class="wrap">
+
+  <!-- ===================== 开场 ===================== -->
+  <section class="hero" id="start">
+    <div class="hero-copy">
+      <div class="eyebrow">新生计算机基础讲座 · 2026</div>
+      <h1>第一次走进<br>命令行世界</h1>
+      <p class="lede">服务器、评测机、别人的仓库，都只有文字。这一页先把一台全新的 Windows 变成工作台，再把四件基本功交到你手上。</p>
+
+      <nav class="toc">
+        <a href="#setup"><span class="n">00</span><span class="t">Windows 前置环境</span><span class="d">镜像 · PATH</span></a>
+        <a href="#shell"><span class="n">01</span><span class="t">Shell 基础命令</span><span class="d">终端 · 管道</span></a>
+        <a href="#git"><span class="n">02</span><span class="t">Git 版本控制</span><span class="d">三区 · 分支</span></a>
+        <a href="#nvim"><span class="n">03</span><span class="t">Neovim 编辑器</span><span class="d">模式编辑</span></a>
+        <a href="#cc"><span class="n">04</span><span class="t">C 编译全过程</span><span class="d">四步流水线</span></a>
+      </nav>
+
+    </div>
+
+    <div class="hero-console">
+      <p class="console-label">local shell / ready to learn</p>
+      <div class="term" aria-label="首屏终端预览">
+        <div class="term-bar">
+          <span class="title">命令行世界 · starter</span>
+          <span class="badge ok">● online</span>
+        </div>
+        <div class="term-out" aria-hidden="true">
+          <div class="tl u">ghs@local:~/command-line$ <span class="hl2">./start-learning</span></div>
+          <div class="tl o">loading fundamentals...</div>
+          <div class="tl c2">[00] prepare windows</div>
+          <div class="tl c2">[01] shell commands</div>
+          <div class="tl c2">[02] git workflow</div>
+          <div class="tl c2">[03] edit with neovim</div>
+          <div class="tl c2">[04] compile from source</div>
+          <div class="tl d">ready when you are.</div>
+          <div class="tl u">ghs@local:~/command-line$ <span class="hl2">_</span></div>
+        </div>
+        <div class="term-in">
+          <span class="prompt">ghs@local:~/command-line$</span>
+        </div>
+      </div>
+      <p class="console-caption">先把环境装好，再建立你和终端之间的第一条连接。</p>
+    </div>
+  </section>
+
+  <!-- ===================== Windows 前置 ===================== -->
+  <section class="sec" id="setup">
+    <div class="sec-head reveal">
+      <div class="sec-idx">00</div>
+      <h2>把新 Windows 变成工作台</h2>
+      <p class="sec-sub">以下步骤是教程，不会在本机自动安装任何东西。照顺序完成，最后用一组命令确认环境，再进入 Shell、Git 和 C。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>先认识三个窗口</h3>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <tr><th style="width:210px">窗口</th><th>用来做什么</th></tr>
+          <tr><td>Windows Terminal</td><td>统一打开 PowerShell、Git Bash、MSYS2 UCRT64 的入口；从 Microsoft Store 安装即可。</td></tr>
+          <tr><td>PowerShell</td><td>Windows 的系统终端。安装程序、检查 PATH、启动本站时优先使用它。</td></tr>
+          <tr><td>Git Bash</td><td>随 Git for Windows 安装，提供 <code>bash</code> 和常见 Unix 命令；它不是 MSYS2。</td></tr>
+          <tr><td>MSYS2 UCRT64</td><td>专门提供 GCC 编译器和类 Unix 工具；编译 C 时使用这个窗口。</td></tr>
+        </table>
+      </div>
+      <div class="note warn"><b>不要混淆：</b>Git Bash 主要服务 Git；MSYS2 UCRT64 主要服务 GCC。两者都能输入 <code>ls</code>，但安装目录、包管理器和工具链不是一套。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>1. 安装 Git for Windows</h3>
+      <p>下载 64 位安装器，安装时大部分选项保持默认；遇到“默认编辑器”可以选 Neovim，暂时没有 Neovim 就先选 Vim。</p>
+      <pre class="code" data-lang="text"><code id="cb-p1"></code></pre>
+      <script type="text/plain" data-target="cb-p1">下载页（国内镜像）：
+https://registry.npmmirror.com/-/binary/git-for-windows/
+
+推荐文件形态：
+Git-版本号-64-bit.exe
+
+安装后重新打开 Windows Terminal，检查：
+PS> git --version
+PS> bash --version</script>
+      <p>安装器里的 PATH 选项保持默认的“Git from the command line and also from 3rd-party software”，这样 PowerShell、编辑器和本站服务都能找到 <code>git</code>。</p>
+      <pre class="code" data-lang="bash"><code id="cb-p1b"></code></pre>
+      <script type="text/plain" data-target="cb-p1b"># 第一次提交前，设置提交记录里的身份
+git config --global user.name "你的名字"
+git config --global user.email "你的邮箱"
+git config --global init.defaultBranch main
+
+# 查看是否写入成功
+git config --global --list</script>
+      <div class="note">如果镜像目录有多个版本，选不带 <code>rc</code>（候选版）字样的最新稳定目录；不要下载 <code>MinGit</code>，它没有完整的 Git Bash 体验。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>2. 安装 MSYS2，再装 UCRT64 + GCC</h3>
+      <p>MSYS2 是 C 工具链的容器。先下载安装器，再从开始菜单打开 <b>MSYS2 UCRT64</b>，不要在 Git Bash 里执行下面的 <code>pacman</code> 命令。</p>
+      <pre class="code" data-lang="bash"><code id="cb-p2"></code></pre>
+      <script type="text/plain" data-target="cb-p2">下载 MSYS2（国内镜像，64 位）：
+https://mirrors.ustc.edu.cn/msys2/distrib/x86_64/
+
+# 在“MSYS2 UCRT64”窗口中执行
+pacman -Syu
+# 如果窗口提示关闭：关闭它，再重新打开 MSYS2 UCRT64，继续执行
+pacman -Syu
+pacman -S --needed mingw-w64-ucrt-x86_64-toolchain
+
+gcc --version
+g++ --version</script>
+      <p>如果默认源下载慢，在 MSYS2 UCRT64 窗口编辑 <code>/etc/pacman.d/mirrorlist.mingw</code> 与 <code>/etc/pacman.d/mirrorlist.msys</code>，把下面两行放到各自文件最上方：</p>
+      <pre class="code" data-lang="text"><code id="cb-p3"></code></pre>
+      <script type="text/plain" data-target="cb-p3">Server = https://mirrors.ustc.edu.cn/msys2/mingw/$repo/
+Server = https://mirrors.ustc.edu.cn/msys2/msys/$arch/
+
+# 清华镜像也可用：
+https://mirrors.tuna.tsinghua.edu.cn/msys2/</script>
+      <div class="note good"><b>推荐环境：</b>UCRT64 是 MSYS2 当前推荐的 GCC 环境。它的编译器通常位于 <code>C:\msys64\ucrt64\bin</code>。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>3. 让 PowerShell 找到 gcc</h3>
+      <p>在 UCRT64 窗口里输入 <code>which gcc</code>，确认它来自 <code>/ucrt64/bin/gcc</code>。如果希望在 PowerShell、VS Code 和本站真实终端里直接使用 <code>gcc</code>，把 Windows 路径加入“用户 PATH”。</p>
+      <pre class="code" data-lang="powershell"><code id="cb-p4"></code></pre>
+      <script type="text/plain" data-target="cb-p4"># 图形界面方式（推荐）
+设置 → 系统 → 系统信息 → 高级系统设置
+→ 环境变量 → 用户变量中的 Path → 编辑 → 新建
+→ C:\msys64\ucrt64\bin → 确定
+
+# 或者在 PowerShell 中写入用户 PATH（执行后重开终端）
+$old = [Environment]::GetEnvironmentVariable("Path", "User")
+$add = "C:\msys64\ucrt64\bin"
+if (($old -split ';') -notcontains $add) {
+  [Environment]::SetEnvironmentVariable("Path", (($old.TrimEnd(';') + ';' + $add).Trim(';')), "User")
+}</script>
+      <div class="note bad"><b>PATH 只改一次：</b>不要把整个 <code>C:\msys64\usr\bin</code> 加进 Windows PATH，也不要把 Git Bash 的 <code>usr\bin</code> 和 UCRT64 的 <code>bin</code> 混在前面，否则可能出现 DLL 或命令版本冲突。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>4. 安装 Node.js LTS</h3>
+      <p>本站的 <code>server.cjs</code> 需要 Node.js。下载 Windows x64 的 LTS 安装器，安装时保持默认，并勾选自动加入 PATH。</p>
+      <pre class="code" data-lang="text"><code id="cb-p5"></code></pre>
+      <script type="text/plain" data-target="cb-p5">国内镜像：
+https://mirrors.huaweicloud.com/nodejs/latest-krypton/
+
+选择：
+node-v24.x.x-x64.msi
+
+安装后重新打开 PowerShell：
+node --version
+npm --version</script>
+      <p>Node.js 装好后，npm 默认可以访问公网仓库；为减少国内网络波动，把 npm registry 改为 npmmirror：</p>
+      <pre class="code" data-lang="bash"><code id="cb-p6"></code></pre>
+      <script type="text/plain" data-target="cb-p6">npm config set registry https://registry.npmmirror.com
+npm config get registry
+# 应输出：https://registry.npmmirror.com/</script>
+      <div class="note">镜像目录会随 LTS 更新，教程不绑定某个永久版本号；截至 2026 年 9 月，LTS 线为 Node.js 24（Krypton）。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>5. 安装 Neovim</h3>
+      <p>优先下载 MSI 安装器；如果下载的是 ZIP，就解压到固定目录，并把包含 <code>nvim.exe</code> 的目录加入用户 PATH。</p>
+      <pre class="code" data-lang="text"><code id="cb-p7"></code></pre>
+      <script type="text/plain" data-target="cb-p7">国内镜像（南京大学 GitHub Release 镜像）：
+https://mirrors.nju.edu.cn/github-release/neovim/neovim/LatestRelease/
+
+Windows x64 安装器：
+nvim-win64.msi
+
+安装后重新打开终端：
+nvim --version</script>
+      <div class="note">下载页同时提供 <code>nvim-win64.zip</code>。如果使用 ZIP，建议解压到 <code>C:\Tools\Neovim</code>，并把 <code>C:\Tools\Neovim\bin</code> 加入 PATH；ARM64 电脑选择 <code>nvim-win-arm64.msi</code>。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>6. 安装 Bun，并为项目设置镜像</h3>
+      <p>仓库的包管理器是 Bun。Node.js 先装好后，可以用 npm 安装 Bun；Bun 本体下载和 npm registry 是两件事，分别处理。</p>
+      <pre class="code" data-lang="powershell"><code id="cb-p8"></code></pre>
+      <script type="text/plain" data-target="cb-p8"># PowerShell：通过国内 npm 镜像安装 Bun
+npm install --global bun --registry=https://registry.npmmirror.com
+bun --version
+
+# Bun 使用国内 npm 镜像（当前窗口）
+$env:BUN_CONFIG_REGISTRY = "https://registry.npmmirror.com"
+
+# 写入用户环境变量（新开终端后永久生效）
+[Environment]::SetEnvironmentVariable(
+  "BUN_CONFIG_REGISTRY",
+  "https://registry.npmmirror.com",
+  "User"
+)
+
+# 检查当前窗口的配置
+$env:BUN_CONFIG_REGISTRY
+
+# 若项目固定了 bun.lock，进入项目后安装
+cd C:\Users\你的用户名\Desktop\lab
+bun install</script>
+      <div class="note">如果你只学习 <code>cs</code> 这份静态教程，不必安装 Bun；只有要运行根目录的 Vue 招新站时才需要它。项目锁文件是 <code>bun.lock</code>，不要改用 npm 安装。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>7. 一次性验收环境</h3>
+      <p>关闭所有旧终端，重新打开 Windows Terminal 的 PowerShell，依次执行。<code>where.exe</code> 用来确认命令实际来自哪里。</p>
+      <pre class="code" data-lang="powershell"><code id="cb-p9"></code></pre>
+      <script type="text/plain" data-target="cb-p9">git --version
+gcc --version
+g++ --version
+node --version
+npm --version
+bun --version
+nvim --version
+
+where.exe git
+where.exe gcc
+where.exe node
+where.exe bun
+where.exe nvim</script>
+      <div class="note warn"><b>判断标准：</b>每条命令都能输出版本号；<code>where.exe gcc</code> 最好指向 <code>C:\msys64\ucrt64\bin\gcc.exe</code>。如果刚改过 PATH，必须关闭并重新打开终端，旧窗口不会自动刷新。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>8. 启动这份教程和根项目</h3>
+      <p><code>cs</code> 是独立静态教学站，根目录则是 Vue + Vite 招新站。两者启动方式不同。</p>
+      <pre class="code" data-lang="powershell"><code id="cb-p10"></code></pre>
+      <script type="text/plain" data-target="cb-p10"># 启动 cs 的真实终端页面
+cd C:\Users\你的用户名\Desktop\lab\cs
+node server.cjs
+# 浏览器打开 http://127.0.0.1:3210/
+
+# 启动根目录 Vue 项目（另开一个终端）
+cd C:\Users\你的用户名\Desktop\lab
+bun install
+bun run dev</script>
+      <div class="note bad"><b>安全边界：</b><code>cs</code> 页面中的真实终端会在本机执行你输入的命令，并且服务只绑定 <code>127.0.0.1</code>。不要把它部署到公网，也不要在页面终端里执行来源不明的粘贴命令。</div>
+    </div>
+  </section>
+
+  <!-- ===================== Shell ===================== -->
+  <section class="sec" id="shell">
+    <div class="sec-head reveal">
+      <div class="sec-idx">01</div>
+      <h2>Shell 基础命令</h2>
+      <p class="sec-sub">先弄清"我在哪、这里有什么、怎么去别处"，再把小命令串成流水线。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>九条命令够用很久</h3>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <tr><th style="width:150px">命令</th><th>作用</th></tr>
+          <tr><td>pwd</td><td>我在哪</td></tr>
+          <tr><td>ls</td><td>这里有什么；<code>-a</code> 含隐藏文件，<code>-l</code> 看详情</td></tr>
+          <tr><td>cd 路径</td><td>去别处；<code>..</code> 上一层，<code>~</code> 回 home</td></tr>
+          <tr><td>mkdir / touch</td><td>新建目录 / 新建空文件</td></tr>
+          <tr><td>cp / mv</td><td>复制 / 移动（也是改名）；目录加 <code>-r</code></td></tr>
+          <tr><td>rm</td><td>删除，<b>没有回收站</b></td></tr>
+          <tr><td>cat / less</td><td>看文件；<code>less</code> 翻页，按 <kbd>q</kbd> 退出</td></tr>
+          <tr><td>grep</td><td>在文本里找内容</td></tr>
+          <tr><td>man 命令</td><td>查手册，按 <kbd>q</kbd> 退出</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>把命令串起来</h3>
+      <pre class="code" data-lang="bash"><code id="cb-s1"></code></pre>
+      <script type="text/plain" data-target="cb-s1">$ pwd
+/home/newbie
+$ mkdir labs && cd labs
+$ echo "第一行" > note.txt
+$ echo "第二行" >> note.txt
+$ cat note.txt | wc -l
+2
+</script>
+      <p><code>&gt;</code> 覆盖写入，<code>&gt;&gt;</code> 追加，<code>|</code> 把左边命令的输出直接交给右边当输入。Unix 的哲学就是小命令互相拼接。</p>
+      <div class="note">偷懒三件套：<kbd>Tab</kbd> 补全 · <kbd>↑</kbd> 找回上一条 · <kbd>Ctrl</kbd>+<kbd>C</kbd> 中断 · <kbd>Ctrl</kbd>+<kbd>L</kbd> 清屏。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>真实终端：现在就动手</h3>
+      <p>下面不是模拟器。命令会在这台电脑上真实执行，默认目录就是本页 <code>index.html</code> 所在目录。</p>
+      <div class="note bad"><b>先说清楚：</b><code>rm</code> 是真的删，<code>git reset --hard</code> 是真的丢。动手前先 <code>ls</code> / <code>pwd</code> 看清自己在哪。</div>
+
+      <div class="term" id="term">
+        <div class="term-bar">
+          <span class="title">真实终端 · 命令在本机执行</span>
+          <button class="term-btn" id="termKill" type="button" title="中断当前命令（Ctrl+C）">中断</button>
+          <span class="badge" id="termConn">连接中…</span>
+        </div>
+        <div class="term-out" id="termOut"></div>
+        <div class="term-in">
+          <span class="prompt" id="termPrompt"></span>
+          <input id="termInput" type="text" spellcheck="false" autocomplete="off" aria-label="终端输入">
+          <span class="hint">Enter 执行 · ↑ 历史 · Ctrl+C 中断</span>
+        </div>
+      </div>
+
+      <div class="note">若显示"未连接"：在 <code>cs</code> 目录运行 <code>node server.cjs</code>，然后访问 <code>http://127.0.0.1:3210/</code>。直接双击 HTML 无法执行系统命令。</div>
+    </div>
+  </section>
+
+  <!-- ===================== Git ===================== -->
+  <section class="sec" id="git">
+    <div class="sec-head reveal">
+      <div class="sec-idx">02</div>
+      <h2>Git 版本控制</h2>
+      <p class="sec-sub">给代码一台时光机，也让多人在同一份代码上并行而不互相踩脚。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>记住三个区域</h3>
+      <div class="flow">
+        <span class="box">工作区<i>改文件</i></span><span class="ar">→</span>
+        <span class="box">暂存区<i>git add</i></span><span class="ar">→</span>
+        <span class="box">本地仓库<i>git commit</i></span><span class="ar">⇄</span>
+        <span class="box">远程仓库<i>push / pull</i></span>
+      </div>
+      <p>你平时改文件的地方是工作区；<code>git add</code> 把改动放上"打包台"；<code>git commit</code> 才真正生成一个快照。<b>只有 commit 过的东西才被保护。</b></p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>第一次提交</h3>
+      <pre class="code" data-lang="bash"><code id="cb-g1"></code></pre>
+      <script type="text/plain" data-target="cb-g1">$ git init
+$ git status
+$ git add hello.c
+$ git commit -m "feat: add hello world"
+$ git log --oneline
+a1b2c3d feat: add hello world
+</script>
+      <p>迷路了就敲 <code>git status</code>。提交信息用"动词 + 内容"：<code>feat:</code> 新功能 · <code>fix:</code> 修 bug · <code>docs:</code> 文档 · <code>refactor:</code> 重构。小步多提交。</p>
+      <div class="note">编译产物不该进仓库。在根目录写 <code>.gitignore</code>，每行一条：<code>*.o</code>、<code>a.out</code>、<code>node_modules/</code>。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>分支与远程</h3>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <tr><th style="width:200px">命令</th><th>作用</th></tr>
+          <tr><td>git switch -c dev</td><td>新建并切到 dev 分支</td></tr>
+          <tr><td>git switch main</td><td>切回主分支</td></tr>
+          <tr><td>git merge dev</td><td>把 dev 合并进当前分支</td></tr>
+          <tr><td>git clone 地址</td><td>把远端仓库拷到本地</td></tr>
+          <tr><td>git push / pull</td><td>推送到远端 / 拉取别人的提交</td></tr>
+        </table>
+      </div>
+      <p>日常循环只有四步：<b>改代码 → add → commit → push</b>。动手前先 <code>pull</code> 一次。</p>
+      <div class="note warn">两人改了同一处代码，合并会冲突：文件里出现 <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> 与 <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code> 标记的两份内容，删掉不要的，再 <code>add</code> + <code>commit</code>。这是常态，不是事故。</div>
+    </div>
+  </section>
+
+  <!-- ===================== Neovim ===================== -->
+  <section class="sec" id="nvim">
+    <div class="sec-head reveal">
+      <div class="sec-idx">03</div>
+      <h2>Neovim 编辑器</h2>
+      <p class="sec-sub">服务器上只有终端。Vim 的学习曲线陡，但一旦上手，手指就不用离开主键区。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>核心心法：模式</h3>
+      <div class="flow">
+        <span class="box">普通<i>Esc，按键即命令</i></span>
+        <span class="box">插入<i>i / a，按键即打字</i></span>
+        <span class="box">可视<i>v，按键即选择</i></span>
+        <span class="box">命令行<i>:</i></span>
+      </div>
+      <p>打开文件默认在<b>普通模式</b>，这时按键是命令而不是文字。按 <kbd>i</kbd> 进入插入模式开始打字，干完按 <kbd>Esc</kbd> 回来。忘了在哪个模式？按几下 <kbd>Esc</kbd> 总能安全降落。</p>
+      <pre class="code" data-lang="vim"><code id="cb-n1"></code></pre>
+      <script type="text/plain" data-target="cb-n1">$ nvim hello.c       打开文件（不存在则新建）
+i                    进入插入模式        Esc   回到普通模式
+:w                   保存                :q    退出
+:wq                  保存并退出          :q!   不保存强退
+</script>
+    </div>
+
+    <div class="blk reveal">
+      <h3>移动与编辑</h3>
+      <pre class="code" data-lang="vim"><code id="cb-n2"></code></pre>
+      <script type="text/plain" data-target="cb-n2">h j k l        左下上右
+w / b          下一个 / 上一个词
+0 / $          行首 / 行尾
+gg / G         文件开头 / 文件结尾
+/关键词        搜索，n 下一个，N 上一个
+dd / yy / p    删行 / 复制行 / 粘贴
+u / Ctrl+r     撤销 / 重做
+5j  3w  2dd    数字前缀 = 重复次数
+</script>
+      <p>这就是 Vim 的语法：<b>数量 + 动词 + 对象</b>。<code>d2w</code> 是"删掉两个词"。</p>
+      <div class="note good">第一周别装插件，也别装退出插件。<code>vimtutor</code>（Vim）或 <code>nvim +Tutor</code>（Neovim）有官方互动教程，每天 10 分钟就够。</div>
+      <pre class="code" data-lang="lua"><code id="cb-n3"></code></pre>
+      <script type="text/plain" data-target="cb-n3">-- ~/.config/nvim/init.lua
+vim.opt.number = true            -- 显示行号
+vim.opt.expandtab = true         -- Tab 插入空格
+vim.opt.tabstop = 4
+vim.g.mapleader = " "            -- leader 键设为空格
+</script>
+    </div>
+  </section>
+
+  <!-- ===================== C 编译 ===================== -->
+  <section class="sec" id="cc">
+    <div class="sec-head reveal">
+      <div class="sec-idx">04</div>
+      <h2>从 .c 到可执行文件</h2>
+      <p class="sec-sub">你写的 C 不是给机器看的。中间隔着四步：预处理 → 编译 → 汇编 → 链接。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>点每一步，看发生了什么</h3>
+      <div class="pipe" id="pipe"></div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>平时只需要一条命令</h3>
+      <pre class="code" data-lang="bash"><code id="cb-c1"></code></pre>
+      <script type="text/plain" data-target="cb-c1">$ gcc -Wall hello.c -o hello    # 一条命令走完四步
+$ ./hello
+Hello, world!
+</script>
+      <p><code>-Wall</code> 打开警告。想看中间产物就用 <code>gcc -E</code>（预处理）、<code>gcc -S</code>（汇编）、<code>gcc -c</code>（目标文件）——每步的产物都是文件，可以任意接续。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>报错发生在哪一步</h3>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <tr><th style="width:230px">现象</th><th>阶段与对策</th></tr>
+          <tr><td>error: expected ';'</td><td>② 编译：语法错误，看行号，多半是缺分号或括号不配对</td></tr>
+          <tr><td>undefined reference to `greet'</td><td>④ 链接：函数没实现，或漏编译某个 .c / 漏链接库</td></tr>
+        </table>
+      </div>
+      <div class="note">多个源文件一起交给 gcc 就行：<code>gcc main.c util.c -o app</code>。文件多到几十上百个时再上 <code>make</code> / <code>CMake</code>，原理完全一样。</div>
+    </div>
+  </section>
+
+  <!-- ===================== 路线 ===================== -->
+  <section class="sec" id="road">
+    <div class="sec-head reveal">
+      <div class="sec-idx">05</div>
+      <h2>学习路线</h2>
+      <p class="sec-sub">别贪多。每天 10–20 分钟，两周就能在命令行世界里独立行走。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>按这个顺序走</h3>
+      <ol>
+        <li><b>第 1 周</b>：Shell——把上面九条命令用熟，每天在终端里完成一个真实小任务。</li>
+        <li><b>第 1–2 周</b>：<code>vimtutor</code> 每天 10 分钟，并且强迫自己用 nvim 写代码和笔记。</li>
+        <li><b>第 2 周起</b>：所有作业都 <code>git init</code>，每次改动都提交。</li>
+        <li><b>始终</b>：遇到 bug 先自己查 15 分钟，再去问人。</li>
+      </ol>
+      <div class="note good"><b>练习：</b>建一个 <code>my-lab</code> 仓库，写 <code>note.md</code> 提交两次，用 nvim 改一次，再把 04 节的四步编译亲手走一遍。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>免费资源</h3>
+      <ul>
+        <li><a href="https://missing-semester-cn.github.io/" target="_blank" rel="noopener">The Missing Semester</a> —— 命令行、版本控制、编辑器的系统课，首选。</li>
+        <li><a href="https://learngitbranching.js.org/?locale=zh_CN" target="_blank" rel="noopener">Learn Git Branching</a> —— 可视化闯关，理解分支最快的方式。</li>
+        <li><a href="https://git-scm.com/book/zh/v2" target="_blank" rel="noopener">Pro Git 中文版</a> —— 官方免费书，当手册查。</li>
+        <li><a href="https://missing-semester-cn.github.io/2020/editors/" target="_blank" rel="noopener">Editors</a> —— Vim 同款课程。</li>
+        <li><a href="https://csapp.cs.cmu.edu/" target="_blank" rel="noopener">CSAPP</a> —— 想深挖编译与链接，从前几章开始。</li>
+      </ul>
+      <p>大多数"难"，只是"陌生"的伪装。两个月后，<code>$</code> 提示符、红色的报错、退不出去的 vim，都会像喝水一样自然。</p>
+    </div>
+
+    <footer class="site">
+      <span>新生计算机基础讲座 · 单文件离线页面</span>
+  <span>Windows · Shell · Git · Neovim · C</span>
+    </footer>
+  </section>
+
+</div>
+</main>
+
+<!-- 悬浮按键显示 -->
+<div class="kfloat" id="kf" role="region" aria-label="键盘按键显示">
+  <div class="kf-head">
+    <span class="kf-title">按下的符号</span>
+    <span class="kf-count" id="kfCount">0</span>
+    <button class="kf-btn" id="kfClear" type="button" title="清空记录">清空</button>
+    <button class="kf-btn" id="kfToggle" type="button" title="收起 / 展开">—</button>
+  </div>
+  <div class="kf-body" id="kfBody" aria-live="polite">
+    <span class="kf-empty" id="kfEmpty">按下任意键试试<br>旧符号会一级级变淡</span>
+  </div>
+</div>
+
+<noscript><div class="noscript">本页的代码示例需要启用 JavaScript；真实终端还需先运行 node server.cjs 并访问 http://127.0.0.1:3210/ 。</div></noscript>
+
+<script>
+(function () {
+  'use strict';
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ============ 工具 ============ */
+  var escMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+  function esc(s) { return s.replace(/[&<>]/g, function (c) { return escMap[c]; }); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  /* ============ 代码块内容注入 ============ */
+  document.querySelectorAll('script[type="text/plain"][data-target]').forEach(function (src) {
+    var t = document.getElementById(src.getAttribute('data-target'));
+    if (t) { t.textContent = src.textContent.replace(/^\r?\n/, '').replace(/\n\s*$/, '\n'); }
+    src.parentNode.removeChild(src);
+  });
+
+  /* ============ 语法高亮 ============ */
+  var BASH_CMDS = ('pwd ls cd mkdir touch cp mv rm cat echo head tail less more grep wc sort uniq tr cut ' +
+    'man which whereis whoami date clear history file find xargs sed awk tee chmod chown sudo su source export ' +
+    'alias printf read test true false gcc cc clang make cmake git nvim vim nano python python3 node npm ' +
+    'pnpm yarn bun curl wget tar zip unzip ssh scp kill ps top htop exit help').split(' ');
+  var BASH_KW = ('if then else elif fi for while until do done case esac in function return local break continue').split(' ');
+  var allCmds = {}, kwSet = {};
+  BASH_CMDS.forEach(function (c) { allCmds[c] = 1; });
+  BASH_KW.forEach(function (c) { kwSet[c] = 1; });
+  var C_KW = ('auto break case char const continue default do double else enum extern float for goto if int long register return short signed sizeof static struct switch typedef union unsigned void volatile while').split(' ');
+  var C_TYPES = {};
+  C_KW.forEach(function (c) { C_TYPES[c] = 1; });
+  var LUA_KW = ('local function end if then else elseif for while do repeat until return nil true false and or not in break').split(' ');
+  var luaKw = {};
+  LUA_KW.forEach(function (c) { luaKw[c] = 1; });
+
+  function segHtml(segs) {
+    var map = { cm: 't-cm', k: 't-k', s: 't-s', v: 't-v', o: 't-o', p: 't-p',
+      com: 't-c', pp: 't-pp', num: 't-num', f: 't-f', ty: 't-ty',
+      punc: 't-punc', pr: 't-pr' };
+    var h = '';
+    segs.forEach(function (g) {
+      var txt = esc(g.t);
+      var cls = map[g.c];
+      h += cls ? '<span class="' + cls + '">' + txt + '</span>' : txt;
+    });
+    return h;
+  }
+
+  /* --- bash：按行处理，识别 $ 提示符 --- */
+  function bashLineSegs(str) {
+    var segs = [], i = 0, n = str.length;
+    var buf = '', cls = 'def', wordSeen = false;
+    function flush() {
+      if (!buf) return;
+      if (cls === 'def') {
+        var t = buf, c2 = 'def';
+        if (t.charAt(0) === '$') { c2 = 'v'; }
+        else if (t.indexOf('/') > -1 && (t.charAt(0) === '.' || t.charAt(0) === '/' || t.charAt(0) === '~')) { c2 = 'p'; }
+        else if (t.charAt(0) === '-') { c2 = 'o'; }
+        else if (!wordSeen) {
+          wordSeen = true;
+          if (allCmds[t]) { c2 = 'cm'; }
+          else if (kwSet[t]) { c2 = 'k'; }
+        }
+        segs.push({ c: c2, t: t });
+      } else {
+        segs.push({ c: cls, t: buf });
+      }
+      buf = '';
+    }
+    function put(c2, ch) { if (c2 !== cls) { flush(); cls = c2; } buf += ch; }
+    function readVar() {
+      var s = '$';
+      if (i < n && str.charAt(i) === '{') {
+        while (i < n && str.charAt(i) !== '}') { s += str.charAt(i); i++; }
+        if (i < n) { s += str.charAt(i); i++; }
+      } else {
+        while (i < n && /[A-Za-z0-9_]/.test(str.charAt(i))) { s += str.charAt(i); i++; }
+      }
+      segs.push({ c: 'v', t: s });
+    }
+    while (i < n) {
+      var c = str.charAt(i);
+      if (c === '\'' || c === '"' || c === '`') {
+        flush();
+        var q = c;
+        i++;
+        if (q === '"') {
+          segs.push({ c: 's', t: '"' });
+          var closed = false;
+          while (i < n) {
+            var ch = str.charAt(i);
+            if (ch === '"') { i++; closed = true; segs.push({ c: 's', t: '"' }); break; }
+            if (ch === '\\' && i + 1 < n) { segs.push({ c: 's', t: ch + str.charAt(i + 1) }); i += 2; continue; }
+            if (ch === '$') {
+              var v = '$';
+              if (str.charAt(i + 1) === '{') {
+                i++; v = '${';
+                while (i < n && str.charAt(i) !== '}') { v += str.charAt(i); i++; }
+                if (i < n) { v += '}'; i++; }
+              } else {
+                i++;
+                while (i < n && /[A-Za-z0-9_]/.test(str.charAt(i))) { v += str.charAt(i); i++; }
+              }
+              segs.push({ c: 'v', t: v });
+              continue;
+            }
+            segs.push({ c: 's', t: ch }); i++;
+          }
+          if (!closed) segs.push({ c: 's', t: '"' });
+        } else {
+          var body = '';
+          while (i < n && str.charAt(i) !== q) { body += str.charAt(i); i++; }
+          var closeChar = '';
+          if (i < n) { closeChar = str.charAt(i); i++; }
+          segs.push({ c: 's', t: q + body + closeChar });
+        }
+        cls = 'def'; buf = '';
+      } else if (c === '$' && /[A-Za-z_{]/.test(str.charAt(i + 1) || '')) {
+        flush(); cls = 'def'; buf = ''; readVar();
+      } else if (c === '#') {
+        flush(); cls = 'com'; buf = str.slice(i); i = n;
+      } else if (/\s/.test(c)) {
+        flush(); cls = 'def'; buf = c; flush(); cls = 'def'; buf = '';
+        i++;
+      } else if (c === '|' || c === '&' || c === ';' || c === '<' || c === '>') {
+        flush(); cls = 'punc'; buf = c; flush(); cls = 'def'; buf = '';
+        i++;
+      } else {
+        if (cls === 'def') buf += c; else { flush(); cls = 'def'; buf = c; }
+        i++;
+      }
+    }
+    flush();
+    return segs;
+  }
+
+  function hlBash(text) {
+    return text.split('\n').map(function (line) {
+      var m = line.match(/^(\$\s)/);
+      if (m) return '<span class="t-pr">' + esc(m[1]) + '</span>' + segHtml(bashLineSegs(line.slice(m[1].length)));
+      return esc(line);
+    }).join('\n');
+  }
+
+  /* --- C --- */
+  function hlC(text) {
+    var segs = [], i = 0, n = text.length;
+    var cur = '', cls = 'def', mode = 'n', atLineStart = true;
+    function flush() { if (cur) { segs.push({ c: cls, t: cur }); cur = ''; } }
+    function put(c2, ch) { if (c2 !== cls) { flush(); cls = c2; } cur += ch; }
+    while (i < n) {
+      var c = text.charAt(i), nx = text.charAt(i + 1) || '';
+      if (mode === 'n') {
+        if (c === '\n') { put('def', c); i++; atLineStart = true; }
+        else if (/\s/.test(c)) { put('def', c); i++; }
+        else if (atLineStart && c === '#') { mode = 'pp'; put('pp', c); i++; }
+        else if (c === '/' && nx === '/') { mode = 'lc'; i += 2; }
+        else if (c === '/' && nx === '*') { mode = 'bc'; i += 2; }
+        else if (c === '"' || c === "'") { mode = (c === '"') ? 'dq' : 'sq'; put('s', c); i++; }
+        else if (/[A-Za-z_]/.test(c)) {
+          var j = i;
+          while (j < n && /[A-Za-z0-9_]/.test(text.charAt(j))) { j++; }
+          var w = text.slice(i, j);
+          var kc = 'def';
+          if (C_TYPES[w]) kc = 'ty';
+          else if (text.charAt(j) === '(') kc = 'f';
+          put(kc, w); i = j; atLineStart = false;
+        }
+        else if (/[0-9]/.test(c) || (c === '.' && /[0-9]/.test(nx))) {
+          var j2 = i;
+          while (j2 < n && /[0-9a-fA-FxX_.]/.test(text.charAt(j2))) { j2++; }
+          put('num', text.slice(i, j2)); i = j2; atLineStart = false;
+        }
+        else { put('def', c); i++; atLineStart = false; }
+      }
+      else if (mode === 'lc') {
+        if (c === '\n') { mode = 'n'; put('def', c); i++; atLineStart = true; }
+        else { put('com', c); i++; }
+      }
+      else if (mode === 'bc') {
+        if (c === '*' && nx === '/') { put('com', '*/'); i += 2; mode = 'n'; }
+        else { put('com', c); i++; }
+      }
+      else if (mode === 'pp') {
+        if (c === '\n') { mode = 'n'; put('def', c); i++; atLineStart = true; }
+        else { put('pp', c); i++; }
+      }
+      else if (mode === 'dq' || mode === 'sq') {
+        if (c === '\\' && i + 1 < n) { put('s', c + text.charAt(i + 1)); i += 2; }
+        else if ((mode === 'dq' && c === '"') || (mode === 'sq' && c === "'")) { put('s', c); i++; mode = 'n'; }
+        else { put('s', c); i++; }
+      }
+    }
+    flush();
+    return segHtml(segs);
+  }
+
+  /* --- Lua --- */
+  function hlLua(text) {
+    var segs = [], i = 0, n = text.length;
+    var cur = '', cls = 'def';
+    function flush() { if (cur) { segs.push({ c: cls, t: cur }); cur = ''; } }
+    function put(c2, ch) { if (c2 !== cls) { flush(); cls = c2; } cur += ch; }
+    while (i < n) {
+      var c = text.charAt(i);
+      if (c === '-' && text.charAt(i + 1) === '-') {
+        var eol = text.indexOf('\n', i);
+        var segc = eol === -1 ? text.slice(i) : text.slice(i, eol);
+        put('com', segc); i += segc.length;
+      } else if (c === '"' || c === "'") {
+        put('s', c); i++;
+        while (i < n && text.charAt(i) !== c) {
+          if (text.charAt(i) === '\\' && i + 1 < n) { put('s', text.charAt(i) + text.charAt(i + 1)); i += 2; }
+          else { put('s', text.charAt(i)); i++; }
+        }
+        if (i < n) { put('s', c); i++; }
+      } else if (/[A-Za-z_]/.test(c)) {
+        var j = i;
+        while (j < n && /[A-Za-z0-9_]/.test(text.charAt(j))) { j++; }
+        var w = text.slice(i, j);
+        put(luaKw[w] ? 'k' : (text.charAt(j) === '(' ? 'f' : 'def'), w); i = j;
+      } else if (/[0-9]/.test(c)) {
+        var j2 = i;
+        while (j2 < n && /[0-9a-fA-FxX_.]/.test(text.charAt(j2))) { j2++; }
+        put('num', text.slice(i, j2)); i = j2;
+      } else { put('def', c); i++; }
+    }
+    flush();
+    return segHtml(segs);
+  }
+
+  function hl(lang, code) {
+    if (lang === 'c') return hlC(code);
+    if (lang === 'lua') return hlLua(code);
+    if (lang === 'bash' || lang === 'sh' || lang === 'git') return hlBash(code);
+    return esc(code);
+  }
+
+  function paintBlock(pre) {
+    if (pre.getAttribute('data-painted')) return;
+    pre.setAttribute('data-painted', '1');
+    var code = pre.querySelector('code');
+    var lang = pre.getAttribute('data-lang') || 'text';
+    var head = el('div', 'c-head');
+    head.appendChild(el('span', 'c-lang', lang));
+    var btn = el('button', 'c-copy', '复制');
+    btn.type = 'button';
+    head.appendChild(btn);
+    pre.insertBefore(head, pre.firstChild);
+    code.innerHTML = hl(lang, code.textContent);
+  }
+  document.querySelectorAll('pre.code').forEach(paintBlock);
+
+  /* 复制（事件委托） */
+  document.addEventListener('click', function (e) {
+    var b = e.target;
+    if (!(b && b.classList && b.classList.contains('c-copy'))) return;
+    var pre = b.closest('pre.code');
+    if (!pre) return;
+    var txt = pre.querySelector('code').textContent;
+    function done() {
+      var old = b.textContent;
+      b.textContent = '已复制';
+      b.classList.add('ok');
+      setTimeout(function () { b.textContent = old; b.classList.remove('ok'); }, 1400);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(done, function () { fallbackCopy(txt); done(); });
+    } else { fallbackCopy(txt); done(); }
+  });
+  function fallbackCopy(txt) {
+    var ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+    document.body.removeChild(ta);
+  }
+
+  /* ============ 滚动显现 + 阅读进度 ============ */
+  if (!reduced && 'IntersectionObserver' in window) {
+    var revealObs = new IntersectionObserver(function (es) {
+      es.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('in'); revealObs.unobserve(en.target); }
+      });
+    }, { threshold: 0.06 });
+    document.querySelectorAll('.reveal').forEach(function (r) { revealObs.observe(r); });
+  } else {
+    document.querySelectorAll('.reveal').forEach(function (r) { r.classList.add('in'); });
+  }
+
+  function onScroll() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var p = max > 0 ? (h.scrollTop / max) * 100 : 0;
+    var bar = document.getElementById('progress');
+    if (bar) bar.style.width = p + '%';
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* ============ 悬浮按键显示 ============ */
+  var kf = document.getElementById('kf');
+  if (kf) {
+    var kfBody = document.getElementById('kfBody');
+    var kfCount = document.getElementById('kfCount');
+    var kfClear = document.getElementById('kfClear');
+    var kfToggle = document.getElementById('kfToggle');
+    var kfEmpty = document.getElementById('kfEmpty');
+    var keyTotal = 0;
+    var MAX_KEEP = 6;
+    var FADE_MS = reduced ? 0 : 500;
+
+    var KEY_NAMES = {
+      Escape: 'Esc', Enter: '⏎', Tab: '⇥', Backspace: '⌫',
+      Delete: 'Del', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
+      Home: 'Home', End: 'End', PageUp: 'PgUp', PageDown: 'PgDn', Insert: 'Ins',
+      CapsLock: '⇪'
+    };
+
+    function ageChips() {
+      var chips = [].slice.call(kfBody.querySelectorAll('.key-chip'));
+      var n = chips.length;
+      for (var i = 0; i < n; i++) {
+        var age = n - 1 - i;
+        var op = age >= MAX_KEEP ? 0 : 1 - age / MAX_KEEP;
+        chips[i].style.opacity = String(Math.round(op * 100) / 100);
+        if (age >= MAX_KEEP && !chips[i].getAttribute('data-gone')) {
+          chips[i].setAttribute('data-gone', '1');
+          (function (old) {
+            setTimeout(function () { if (old.parentNode) old.parentNode.removeChild(old); }, FADE_MS);
+          })(chips[i]);
+        }
+      }
+      while (kfBody.querySelectorAll('.key-chip').length > MAX_KEEP + 5) {
+        var first = kfBody.querySelector('.key-chip');
+        if (!first) break;
+        kfBody.removeChild(first);
+      }
+    }
+
+    function addChip(text, cls) {
+      if (kfEmpty && kfEmpty.parentNode) kfEmpty.parentNode.removeChild(kfEmpty);
+      kfEmpty = null;
+      var chip = el('span', 'key-chip' + (cls ? ' ' + cls : ''));
+      chip.textContent = text;
+      kfBody.appendChild(chip);
+      keyTotal++;
+      kfCount.textContent = keyTotal;
+      ageChips();
+    }
+
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'Process' || e.keyCode === 229) return;
+      if (e.repeat) return;
+      var key = e.key, label = '', cls = '';
+      if (key === 'Shift' || key === 'Control' || key === 'Alt' || key === 'Meta') {
+        cls = 'mod';
+        label = key === 'Control' ? 'Ctrl'
+          : key === 'Shift' ? 'Shift'
+            : key === 'Alt' ? 'Alt'
+              : (navigator.platform && navigator.platform.indexOf('Mac') > -1) ? '⌘' : 'Win';
+      } else if (key === ' ') {
+        cls = 'sp'; label = '␣';
+      } else if (key === 'Backspace' || key === 'Delete') {
+        cls = 'del'; label = KEY_NAMES[key];
+      } else if (KEY_NAMES[key]) {
+        cls = 'sp'; label = KEY_NAMES[key];
+      } else if (key && key.length === 1) {
+        label = key;
+      } else {
+        label = key || e.code || '?';
+      }
+      addChip(label, cls);
+    }, true);
+
+    window.addEventListener('compositionend', function (e) {
+      if (!e.data) return;
+      var s = String(e.data);
+      for (var i = 0; i < s.length; i++) addChip(s.charAt(i));
+    });
+
+    if (kfClear) kfClear.addEventListener('click', function () {
+      kfBody.textContent = '';
+      keyTotal = 0;
+      kfCount.textContent = '0';
+      kfEmpty = el('span', 'kf-empty', '已清空');
+      kfEmpty.id = 'kfEmpty';
+      kfBody.appendChild(kfEmpty);
+    });
+    if (kfToggle) kfToggle.addEventListener('click', function () {
+      var mini = kf.classList.toggle('mini');
+      kfToggle.textContent = mini ? '＋' : '—';
+      kfToggle.title = mini ? '展开' : '收起';
+    });
+
+    var dragState = null;
+    function dragStart(ev) {
+      if (ev.button !== undefined && ev.button !== 0) return;
+      if (ev.target && ev.target.closest && ev.target.closest('.kf-btn')) return;
+      var r = kf.getBoundingClientRect();
+      dragState = { sx: ev.clientX, sy: ev.clientY, ox: r.left, oy: r.top };
+      kf.style.transition = 'none';
+      kf.style.right = 'auto';
+      kf.style.bottom = 'auto';
+      kf.style.left = r.left + 'px';
+      kf.style.top = r.top + 'px';
+      ev.preventDefault();
+    }
+    function dragMove(ev) {
+      if (!dragState) return;
+      var nx = dragState.ox + (ev.clientX - dragState.sx);
+      var ny = dragState.oy + (ev.clientY - dragState.sy);
+      nx = Math.max(4, Math.min(nx, window.innerWidth - kf.offsetWidth - 4));
+      ny = Math.max(4, Math.min(ny, window.innerHeight - 34 - 4));
+      kf.style.left = nx + 'px';
+      kf.style.top = ny + 'px';
+      ev.preventDefault();
+    }
+    function dragEnd() { dragState = null; kf.style.transition = ''; }
+    kf.addEventListener('pointerdown', dragStart);
+    kf.addEventListener('pointermove', dragMove);
+    kf.addEventListener('pointerup', dragEnd);
+    kf.addEventListener('pointercancel', dragEnd);
+  }
+
+  /* ============ 编译流水线 ============ */
+  var STAGES = [
+    {
+      t: '预处理', en: 'preprocess', prod: '.i', cmd: 'gcc -E hello.c -o hello.i',
+      desc: '展开 #include 的头文件、替换 #define 宏、删掉注释。产物仍然是纯文本。',
+      what: ['hello.i 比 hello.c 大得多——头文件被原样贴了进来', '可以直接 cat hello.i 看结果']
+    },
+    {
+      t: '编译', en: 'compile', prod: '.s', cmd: 'gcc -S hello.i -o hello.s',
+      desc: '做词法、语法、类型检查，然后把 C 翻译成当前 CPU 的汇编。大多数编译错误在这一步报出。',
+      what: ['产物是 mov / call / ret 这样的汇编助记符', '同一份 C 在 x86 与 ARM 上得到不同的 .s']
+    },
+    {
+      t: '汇编', en: 'assemble', prod: '.o', cmd: 'gcc -c hello.s -o hello.o',
+      desc: '把汇编翻成机器码，得到目标文件。但 printf 这类外部函数的地址还空着。',
+      what: ['hello.o 是"可重定位文件"，还不能独立运行', '符号表里记着 main、printf 的位置']
+    },
+    {
+      t: '链接', en: 'link', prod: 'hello', cmd: 'gcc hello.o -o hello',
+      desc: '链接器把 hello.o 和它依赖的库合并，把所有待填的地址填实，生成可执行文件。',
+      what: ['多个目标文件一起链接：gcc main.o util.o -o app', '报 undefined reference 就发生在这一步']
+    }
+  ];
+
+  var pipe = document.getElementById('pipe');
+  if (pipe) {
+    var row = el('div', 'pipe-row');
+    var panel = el('div', 'pipe-panel');
+
+    function show(idx) {
+      row.querySelectorAll('.pstep').forEach(function (b, k) {
+        b.classList.toggle('on', k === idx);
+        b.setAttribute('aria-pressed', k === idx ? 'true' : 'false');
+      });
+      var st = STAGES[idx];
+      panel.textContent = '';
+      var ph = el('div', 'ph');
+      ph.appendChild(el('span', 'b2', 'STEP 0' + (idx + 1)));
+      ph.appendChild(el('h4', null, st.t));
+      ph.appendChild(el('small', null, st.en + ' · 产物 ' + st.prod));
+      panel.appendChild(ph);
+      panel.appendChild(el('p', 'pd', st.desc));
+      var ul = el('ul', 'pipe-what');
+      st.what.forEach(function (w) { ul.appendChild(el('li', null, w)); });
+      panel.appendChild(ul);
+      var pre = el('pre', 'code');
+      pre.setAttribute('data-lang', 'bash');
+      pre.appendChild(el('code', null, '$ ' + st.cmd));
+      panel.appendChild(pre);
+      paintBlock(pre);
+    }
+
+    STAGES.forEach(function (st, k) {
+      var b = el('button', 'pstep');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', k === 0 ? 'true' : 'false');
+      b.appendChild(el('span', 'pi', '0' + (k + 1)));
+      b.appendChild(el('b', null, st.t));
+      b.appendChild(el('i', null, st.en));
+      b.addEventListener('click', function () { show(k); });
+      row.appendChild(b);
+      if (k < STAGES.length - 1) row.appendChild(el('span', 'parrow', '→'));
+    });
+
+    pipe.appendChild(row);
+    pipe.appendChild(panel);
+    show(0);
+  }
+
+  /* ============ 真实终端 ============ */
+  var termOut = document.getElementById('termOut');
+  var termIn = document.getElementById('termInput');
+  var termPrompt = document.getElementById('termPrompt');
+  var termConn = document.getElementById('termConn');
+  var termKill = document.getElementById('termKill');
+  var termWidget = document.getElementById('term');
+
+  var TERM = {
+    api: location.protocol === 'file:' ? null : location.origin + '/api',
+    connected: false,
+    busy: false,
+    user: 'user', host: 'local', home: '', cwd: '', shell: '?'
+  };
+  var termHist = [], termHIdx = 0, busyRow = null;
+
+  function trimTerm() { while (termOut.childNodes.length > 600) termOut.removeChild(termOut.firstChild); }
+  function scrollTerm() { termOut.scrollTop = termOut.scrollHeight; }
+  function termRow(cls, text) {
+    var d = el('div', 'tl' + (cls ? ' ' + cls : ''), text);
+    termOut.appendChild(d);
+    trimTerm(); scrollTerm();
+  }
+  function termRowSpan(parts) {
+    var d = el('div', 'tl');
+    parts.forEach(function (p) {
+      var s = el('span', p.c || '');
+      s.textContent = p.t;
+      d.appendChild(s);
+    });
+    termOut.appendChild(d);
+    trimTerm(); scrollTerm();
+  }
+  function shortenPath(p) {
+    if (!p) return '?';
+    if (TERM.home && p === TERM.home) return '~';
+    var sep = p.indexOf('\\') >= 0 ? '\\' : '/';
+    if (TERM.home && p.indexOf(TERM.home + sep) === 0) return '~' + p.slice(TERM.home.length).replace(/\\/g, '/');
+    return p;
+  }
+  function refreshPrompt() {
+    termPrompt.textContent = TERM.connected
+      ? TERM.user + '@' + TERM.host + ':' + shortenPath(TERM.cwd) + '$ '
+      : '';
+  }
+  function setConn(label, ok) {
+    termConn.textContent = label;
+    termConn.classList.toggle('ok', !!ok);
+    termConn.classList.toggle('bad', !ok);
+  }
+  function stripAnsi(s) {
+    return String(s || '').replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '');
+  }
+  function printLines(txt, cls) {
+    var s = stripAnsi(txt).replace(/\r\n/g, '\n');
+    if (s.charAt(s.length - 1) === '\n') s = s.slice(0, -1);
+    if (!s) return;
+    s.split('\n').forEach(function (ln) { termRow(cls, ln); });
+  }
+  function termApi(path, body) {
+    return fetch(TERM.api + path, {
+      method: body ? 'POST' : 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+  function showOffline() {
+    setConn('未连接', false);
+    termIn.disabled = true;
+    termPrompt.textContent = '';
+    termRow('e', '无法连接本地终端服务。');
+    termRow('', '1) 在 index.html 所在目录（cs）打开系统终端');
+    termRow('', '2) 运行：node server.cjs');
+    termRow('', '3) 浏览器访问：http://127.0.0.1:3210/');
+  }
+  function connectTerm() {
+    termOut.textContent = '';
+    if (!TERM.api) { showOffline(); return Promise.resolve(); }
+    return termApi('/info').then(function (info) {
+      TERM.connected = true;
+      TERM.user = info.username || 'user';
+      TERM.host = info.host || 'local';
+      TERM.home = info.home || '';
+      TERM.cwd = info.cwd || '';
+      TERM.shell = info.shell || '?';
+      termIn.disabled = false;
+      refreshPrompt();
+      setConn('已连接 · ' + TERM.shell, true);
+      termRow('', '真实终端已连接。你输入的命令会在这台电脑上真实执行。');
+      termRow('d', '默认目录：' + (info.root || '') + ' · 输入 clear 清屏，↑ 翻历史');
+    }).catch(function () {
+      showOffline();
+    });
+  }
+  function execReal(cmdline) {
+    var line = String(cmdline || '').trim();
+    if (!line || TERM.busy) return;
+    if (line === 'clear' || line === 'cls') { termOut.textContent = ''; refreshPrompt(); return; }
+    termRowSpan([
+      { c: 'u', t: TERM.user + '@' + TERM.host + ':' + shortenPath(TERM.cwd) + '$ ' },
+      { c: 'hl2', t: line }
+    ]);
+    TERM.busy = true;
+    termIn.disabled = true;
+    busyRow = el('div', 'tl w', '运行中…（卡住了就点"中断"）');
+    termOut.appendChild(busyRow);
+    scrollTerm();
+    return termApi('/exec', { cmd: line }).then(function (r) {
+      if (busyRow && busyRow.parentNode) busyRow.parentNode.removeChild(busyRow);
+      busyRow = null;
+      if (r.cwd) TERM.cwd = r.cwd;
+      printLines(r.stdout, 'o');
+      printLines(r.stderr, 'e');
+      if (r.timedout) termRow('w', '命令超过 60 秒，已被强制终止。');
+      else if (r.killed) termRow('w', '命令已被中断。');
+      else if (r.code !== 0 && r.code != null) termRow('d', '[退出码 ' + r.code + ']');
+    }).catch(function (e) {
+      if (busyRow && busyRow.parentNode) busyRow.parentNode.removeChild(busyRow);
+      busyRow = null;
+      termRow('e', '请求失败：' + e.message);
+    }).then(function () {
+      TERM.busy = false;
+      termIn.disabled = !TERM.connected;
+      refreshPrompt();
+      scrollTerm();
+      termIn.focus();
+    });
+  }
+  function sendKill() {
+    if (TERM.busy) termRow('w', '已发送中断请求…');
+    if (TERM.api) termApi('/kill').catch(function () { /* ignore */ });
+  }
+  termIn.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') {
+      var v = termIn.value;
+      termHist.push(v);
+      termHIdx = termHist.length;
+      termIn.value = '';
+      execReal(v);
+    } else if (ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      if (termHIdx > 0) { termHIdx--; termIn.value = termHist[termHIdx] || ''; }
+    } else if (ev.key === 'ArrowDown') {
+      ev.preventDefault();
+      if (termHIdx < termHist.length - 1) { termHIdx++; termIn.value = termHist[termHIdx] || ''; }
+      else { termHIdx = termHist.length; termIn.value = ''; }
+    } else if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'c' || ev.key === 'C')) {
+      if (TERM.busy) { ev.preventDefault(); sendKill(); }
+    }
+  });
+  if (termKill) termKill.addEventListener('click', sendKill);
+  if (termWidget) termWidget.addEventListener('click', function () { termIn.focus(); });
+  connectTerm();
+})();
+</script>
+</body>
+</html>
