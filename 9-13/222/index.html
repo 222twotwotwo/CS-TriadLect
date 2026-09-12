@@ -303,9 +303,10 @@
     background:var(--nav-bg);backdrop-filter:blur(12px);
     border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 24px rgba(23,25,29,.12);
     font-size:12px;cursor:grab;user-select:none;touch-action:none;
+    --kf-fs:40px;              /* 悬浮字符基准字号：面板上的 A− / A+ 调整 */
   }
   .kfloat:active{cursor:grabbing}
-  .kf-head{display:flex;align-items:center;gap:10px;padding:8px 10px 6px;color:var(--faint)}
+  .kf-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px;row-gap:4px;padding:8px 10px 6px;color:var(--faint)}
   .kf-title{color:var(--mut)}
   .kf-count{font-family:var(--mono);color:var(--accent)}
   .kf-btn{
@@ -313,26 +314,34 @@
     border:1px solid var(--line);border-radius:3px;padding:1px 7px;
   }
   .kf-btn:hover{color:var(--ink);border-color:var(--faint)}
+  .kf-zoom{font-family:var(--mono);letter-spacing:-.02em}
+  .kf-btn[disabled]{opacity:.36;cursor:default}
+  .kf-btn[disabled]:hover{color:var(--mut);border-color:var(--line)}
   .kf-body{
     display:flex;flex-wrap:nowrap;align-items:baseline;justify-content:flex-end;
     gap:8px;padding:0 12px 12px;overflow:hidden;min-height:60px;
+    font-size:var(--kf-fs);
+    /* 字号放大后字符会更宽：允许收缩到面板宽度，多出的旧字符从左边裁掉 */
+    min-width:0;max-width:100%;
   }
   .kf-empty{color:var(--faint);font-size:12px;line-height:1.7;margin:auto;text-align:right}
   .kfloat.mini .kf-body{display:none}
-  .kfloat.mini .kf-title,.kfloat.mini .kf-count,.kfloat.mini #kfClear{display:none}
+  /* 收起时只剩一个按钮：字号按钮此时没有可见对象，一并隐藏 */
+  .kfloat.mini .kf-title,.kfloat.mini .kf-count,.kfloat.mini #kfClear,
+  .kfloat.mini #kfSmall,.kfloat.mini #kfBig{display:none}
   .key-chip{
-    font-family:var(--mono);font-size:40px;line-height:1;color:var(--ink);
+    font-family:var(--mono);font-size:1em;line-height:1;color:var(--ink);
     white-space:nowrap;animation:keypop .13s ease;transition:opacity .5s ease;
   }
   .key-chip.sp{color:var(--mut)}
-  .key-chip.mod{color:#3f5d8a;font-size:26px}
+  .key-chip.mod{color:#3f5d8a;font-size:.65em}
   .key-chip.del{color:var(--accent)}
   @keyframes keypop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
   @media (prefers-reduced-motion:reduce){.key-chip{animation:none;transition:none}}
   @media (max-width:560px){
-    .kfloat{max-width:200px}
-    .kf-body{display:none}
-    .key-chip{font-size:32px}
+    .kfloat{max-width:200px;--kf-fs:32px}
+    /* 窄屏下字符行本身不显示，字号按钮也就没有对象，一并收起 */
+    .kf-body,#kfSmall,#kfBig{display:none}
   }
 
   /* ---------- 滚动显现 ---------- */
@@ -848,6 +857,7 @@ u / Ctrl+r     撤销 / 重做
 </script>
       <p>这就是 Vim 的语法：<b>数量 + 动词 + 对象</b>。<code>d2w</code> 是"删掉两个词"。</p>
       <div class="note good">第一周别装插件，也别装退出插件。<code>vimtutor</code>（Vim）或 <code>nvim +Tutor</code>（Neovim）有官方互动教程，每天 10 分钟就够。</div>
+      <div class="note">键位想不起来就查这张表：<a href="https://www.runoob.com/linux/linux-vim.html" target="_blank" rel="noopener">菜鸟教程 · Linux vi/vim</a>。它把上面这些按键收进一张键盘图，再按「一般模式 / 编辑模式 / 指令行模式」分成三份对照表，比翻手册快得多。<b>但别从头背表</b>：先把 <code>h j k l</code>、<code>i</code>、<code>Esc</code>、<code>:wq</code> 练成手指记忆，再拿它当字典用。</div>
       <pre class="code" data-lang="lua"><code id="cb-n3"></code></pre>
       <script type="text/plain" data-target="cb-n3">-- ~/.config/nvim/init.lua
 vim.opt.number = true            -- 显示行号
@@ -922,7 +932,7 @@ Hello, world!
           <tr><th style="width:210px">项目</th><th>要求</th></tr>
           <tr><td>系统版本</td><td>Android 9（API 28）或更高；iPhone、iPad 不行，这个应用只有安卓版</td></tr>
           <tr><td>处理器</td><td>必须是 arm64。近几年的手机基本都满足；x86 处理器的安卓平板用不了</td></tr>
-          <tr><td>存储空间</td><td>中文版安装包约 0.9 GB，装完还要解压出整套系统，建议预留 5 GB 以上</td></tr>
+          <tr><td>存储空间</td><td>中文版安装包约 0.95 GB，装完还要解压出整套系统，建议预留 5 GB 以上</td></tr>
           <tr><td>存储权限</td><td>首次启动会申请；同意后安卓存储会挂载到容器里的 <code>/mnt/sdcard</code></td></tr>
           <tr><td>初始化时间</td><td>第一次打开要等内容解压，通常几分钟。插着电，别中途退出</td></tr>
         </table>
@@ -934,11 +944,15 @@ Hello, world!
     <div class="blk reveal">
       <h3>下载与安装</h3>
       <pre class="code" data-lang="text"><code id="cb-m1"></code></pre>
-      <script type="text/plain" data-target="cb-m1">下载页（GitHub Releases）：
-https://github.com/Cateners/tiny_container/releases
+      <script type="text/plain" data-target="cb-m1">第一次用就选它（自带 Debian 13 + XFCE 桌面 + 中文，约 0.95 GB）
+GitHub 直链（v4.2.2）：
+https://github.com/Cateners/tiny_container/releases/download/v4.2.2/tiny-container-xfce-zh.apk
 
-第一次用就选它（自带 Debian 13 + XFCE 桌面 + 中文，约 0.9 GB）：
-tiny-container-xfce-zh.apk
+GitHub 卡顿、下不动就走这个镜像（同一个文件）：
+https://pan.watrain.com/d/%E5%B9%BF%E6%B2%B9%E9%80%90%E6%A2%A6%E5%AE%9E%E9%AA%8C%E5%AE%A4/tiny-container-xfce-zh.apk?sign=yXjzOtTWBJrdzUGfTJkRm84orAH3pLzL8UcZWXXpml0=:0
+
+想确认有没有更新版本：
+https://github.com/Cateners/tiny_container/releases
 
 只想先试试，或流量紧张（约 27 MB，不自带容器）：
 tiny-container.apk
@@ -948,7 +962,8 @@ tiny-container.apk
 想体验别的桌面（约 2 GB）：
 tiny-container-gxde-zh.apk
 
-版本以 Releases 页面的最新稳定版为准，带 alpha 字样的预览版先不用。</script>
+带 alpha 字样的预览版先不用。</script>
+      <p>在手机上直接点这两个地址就能下载：<a href="https://github.com/Cateners/tiny_container/releases/download/v4.2.2/tiny-container-xfce-zh.apk" target="_blank" rel="noopener">GitHub 直链（v4.2.2）</a>，卡顿或打不开就用<a href="https://pan.watrain.com/d/%E5%B9%BF%E6%B2%B9%E9%80%90%E6%A2%A6%E5%AE%9E%E9%AA%8C%E5%AE%A4/tiny-container-xfce-zh.apk?sign=yXjzOtTWBJrdzUGfTJkRm84orAH3pLzL8UcZWXXpml0=:0" target="_blank" rel="noopener">镜像直链</a>——两个地址是同一个文件，选哪个都行。镜像地址带分享签名，过一段时间可能失效，那时回到 GitHub 直链即可。</p>
       <p>下载完允许“安装未知来源的应用”，装好打开，按提示走完初始化，就进入桌面了。</p>
       <ol>
         <li><b>桌面</b>：XFCE，有文件管理器、浏览器、终端，像一个普通的电脑桌面。</li>
@@ -993,52 +1008,9 @@ $ sudo apt update</script>
     </div>
 
     <div class="blk reveal">
-      <h3>一一对应：手机上做和 00 节一样的事</h3>
-      <div class="tbl-wrap">
-        <table class="tbl">
-          <tr><th style="width:190px">这件事</th><th>Windows 工作台</th><th>手机上的小小容器</th></tr>
-          <tr><td>命令行窗口</td><td>Windows Terminal → MSYS2 UCRT64</td><td>应用内置终端，或桌面里的 <code>xfce4-terminal</code></td></tr>
-          <tr><td>家目录</td><td><code>C:\Users\你的用户名</code></td><td><code>/home/tiny</code></td></tr>
-          <tr><td>包管理器</td><td><code>pacman -S</code></td><td><code>sudo apt install</code></td></tr>
-          <tr><td>C 工具链</td><td><code>mingw-w64-ucrt-x86_64-toolchain</code></td><td><code>build-essential</code></td></tr>
-          <tr><td>版本控制</td><td>Git for Windows 安装器</td><td><code>sudo apt install git</code></td></tr>
-          <tr><td>编辑器</td><td><code>nvim-win64.msi</code></td><td><code>sudo apt install neovim</code></td></tr>
-          <tr><td>改 PATH</td><td>要手动把 <code>C:\msys64\ucrt64\bin</code> 加进用户 PATH</td><td>不用，<code>apt</code> 装完直接能用</td></tr>
-          <tr><td>看安卓上的文件</td><td>—</td><td>容器里的 <code>/mnt/sdcard</code>（需存储权限）</td></tr>
-          <tr><td>本页的真实终端</td><td><code>node server.cjs</code> 后访问 <code>127.0.0.1:3210</code></td><td>用不到：容器自带终端，不需要这一页的服务</td></tr>
-        </table>
-      </div>
-      <p>最后一行别误会：本页的真实终端只是给 Windows 同学“边看边敲”用的环境，命令本身完全一样。手机上没有 Node.js 服务器这一层，你直接用容器里的终端。</p>
-    </div>
-
-    <div class="blk reveal">
-      <h3>手机上的第一次提交</h3>
-      <p>这一段和 02 节的第一次提交是同一套命令，只是换了一台机器来执行。写文件、编译、提交，一次走完：</p>
-      <pre class="code" data-lang="bash"><code id="cb-m3"></code></pre>
-      <script type="text/plain" data-target="cb-m3">$ mkdir -p ~/labs/my-lab && cd ~/labs/my-lab
-$ nvim hello.c          # i 进入插入模式，写完 Esc，再 :wq 保存退出
-$ gcc -Wall hello.c -o hello
-$ ./hello
-Hello, world!
-
-$ git init
-$ git config --global user.name "你的名字"
-$ git config --global user.email "你的邮箱"
-$ git add hello.c
-$ git commit -m "feat: hello on android"
-$ git log --oneline
-
-# 想让代码真正安全，再推到远端
-$ git remote add origin https://github.com/你的用户名/my-lab.git
-$ git push -u origin main</script>
-      <div class="note good"><b>这一步的价值：</b>手机上的代码只有 push 到远端才算真正存下来。容器可以被覆盖、手机可能丢，但 GitHub 上的仓库一直等你——换任何设备，<code>git clone</code> 一条命令就继续干活。</div>
-      <div class="note warn"><b>push 要的是令牌，不是密码：</b>GitHub 早就不接受账号密码。提示输入密码时，填 <b>Personal Access Token</b>（GitHub 的 Settings → Developer settings 里生成，勾上 <code>repo</code> 权限）。嫌麻烦就先在手机上只做 <code>commit</code>，回到电脑再 <code>push</code>。</div>
-      <p>练 Neovim 最好配个蓝牙或 OTG 键盘，横屏之后手感接近小电脑；只有软键盘时，先在手机上专攻 Shell 与 Git 这两块，编辑留给电脑。</p>
-    </div>
-
-    <div class="blk reveal">
       <h3>三个最容易踩的坑</h3>
       <div class="note bad"><b>编译到一半被系统杀掉：</b>安卓会回收后台进程，长任务被清掉是常态。把小小容器留在前台，并在系统设置里把它加入电池优化白名单，重要编译趁手机电量充足时做。</div>
+      <div class="note"><b>打算长期用，就再做一步：</b>限制后台进程是安卓系统级的策略，白名单只能缓解、不能根治。这时可以装一个 <a href="https://www.vmos.cn/zhushou.htm" target="_blank" rel="noopener">VMOS 助手</a>：它让手机通过「无线调试」拿到 shell 权限，从系统层面解除这道进程限制，虚拟机、容器才不会再动不动被回收。步骤是连上 WiFi → 打开助手 → 系统设置里的开发者选项 → 无线调试 → 用配对码配对设备，<b>激活一次就够</b>，重启手机也不用重来；以后又变得不稳定时，再激活一次即可。</div>
       <div class="note warn"><b>把容器当成唯一存档：</b>卸载应用、覆盖装容器、系统清理都可能带走数据。凡是舍不得丢的代码，一律 <code>push</code> 到远端。</div>
       <div class="note good"><b>把它当成过渡方案，而不是替代品：</b>学校机房、图书馆的电脑、同学的电脑都该用起来；课程作业以老师指定的环境为准。好消息是——手机上练出来的手感，在这些地方可以无缝接上。</div>
       <p>手机上的 Linux 不是“退而求其次”。它和真正的服务器离得更近：同一套 Shell、同一套 Git、同一个 GCC。先把它用熟，等你拿到自己的电脑时，需要重新学的只剩下安装步骤。</p>
@@ -1072,6 +1044,7 @@ $ git push -u origin main</script>
         <li><a href="https://learngitbranching.js.org/?locale=zh_CN" target="_blank" rel="noopener">Learn Git Branching</a> —— 可视化闯关，理解分支最快的方式。</li>
         <li><a href="https://git-scm.com/book/zh/v2" target="_blank" rel="noopener">Pro Git 中文版</a> —— 官方免费书，当手册查。</li>
         <li><a href="https://missing-semester-cn.github.io/2020/editors/" target="_blank" rel="noopener">Editors</a> —— Vim 同款课程。</li>
+        <li><a href="https://www.runoob.com/linux/linux-vim.html" target="_blank" rel="noopener">菜鸟教程 · Linux vi/vim</a> —— 中文键位速查，带键盘图，卡住时对着查（见 <a href="#nvim">03 节</a>）。</li>
         <li><a href="https://csapp.cs.cmu.edu/" target="_blank" rel="noopener">CSAPP</a> —— 想深挖编译与链接，从前几章开始。</li>
       </ul>
       <p>大多数"难"，只是"陌生"的伪装。两个月后，<code>$</code> 提示符、红色的报错、退不出去的 vim，都会像喝水一样自然。</p>
@@ -1091,11 +1064,13 @@ $ git push -u origin main</script>
   <div class="kf-head">
     <span class="kf-title">按下的符号</span>
     <span class="kf-count" id="kfCount">0</span>
+    <button class="kf-btn kf-zoom" id="kfSmall" type="button" title="缩小悬浮字符" aria-label="缩小悬浮字符">A−</button>
+    <button class="kf-btn kf-zoom" id="kfBig" type="button" title="放大悬浮字符" aria-label="放大悬浮字符">A+</button>
     <button class="kf-btn" id="kfClear" type="button" title="清空记录">清空</button>
     <button class="kf-btn" id="kfToggle" type="button" title="收起 / 展开">—</button>
   </div>
   <div class="kf-body" id="kfBody" aria-live="polite">
-    <span class="kf-empty" id="kfEmpty">按下任意键试试<br>旧符号会一级级变淡</span>
+    <span class="kf-empty" id="kfEmpty">按下任意键试试<br>旧符号会一级级变淡<br>A− / A+ 调整字号</span>
   </div>
 </div>
 
@@ -1501,6 +1476,47 @@ $ git push -u origin main</script>
       kfToggle.textContent = mini ? '＋' : '—';
       kfToggle.title = mini ? '展开' : '收起';
     });
+
+    /* ---- 悬浮字符大小：A− / A+ ---- */
+    var kfSmall = document.getElementById('kfSmall');
+    var kfBig = document.getElementById('kfBig');
+    var SIZE_STEPS = [14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 84, 96, 112];
+    var SIZE_KEY = 'cs-kf-font';
+    var kfSize = 0;          // 0 = 还没手动调过，先跟随 CSS 默认值（手机上更小）
+
+    function currentSize() {
+      if (kfSize) return kfSize;
+      var v = parseFloat(window.getComputedStyle(kfBody).fontSize);
+      return isFinite(v) && v > 0 ? v : 40;
+    }
+    function syncBounds() {
+      var cur = currentSize();
+      if (kfSmall) kfSmall.disabled = cur <= SIZE_STEPS[0];
+      if (kfBig) kfBig.disabled = cur >= SIZE_STEPS[SIZE_STEPS.length - 1];
+    }
+    function applySize(px, persist) {
+      kfSize = Math.max(SIZE_STEPS[0], Math.min(SIZE_STEPS[SIZE_STEPS.length - 1], px));
+      kf.style.setProperty('--kf-fs', kfSize + 'px');
+      syncBounds();
+      if (persist === false) return;
+      try { window.localStorage.setItem(SIZE_KEY, String(kfSize)); } catch (e) { /* 隐私模式忽略 */ }
+    }
+    function stepSize(dir) {
+      var cur = currentSize(), next = cur, i;
+      if (dir > 0) {
+        for (i = 0; i < SIZE_STEPS.length; i++) { if (SIZE_STEPS[i] > cur + 0.5) { next = SIZE_STEPS[i]; break; } }
+      } else {
+        for (i = SIZE_STEPS.length - 1; i >= 0; i--) { if (SIZE_STEPS[i] < cur - 0.5) { next = SIZE_STEPS[i]; break; } }
+      }
+      applySize(next);
+    }
+    if (kfSmall) kfSmall.addEventListener('click', function () { stepSize(-1); });
+    if (kfBig) kfBig.addEventListener('click', function () { stepSize(1); });
+
+    /* 恢复上次的选择；没选过就沿用 CSS 基准（手机上自动小一号） */
+    var savedSize = 0;
+    try { savedSize = parseFloat(window.localStorage.getItem(SIZE_KEY)) || 0; } catch (e) { savedSize = 0; }
+    if (savedSize > 0) applySize(savedSize, false); else syncBounds();
 
     var dragState = null;
     function dragStart(ev) {
