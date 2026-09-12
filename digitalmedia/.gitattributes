@@ -1,0 +1,7 @@
+# 行尾统一：Windows 批处理必须是 CRLF（否则 cmd.exe 解析会炸），shell 脚本必须是 LF。
+# 源码自动识别，避免不同系统 clone 下来互相打架。
+* text=auto
+*.bat text eol=crlf
+*.sh text eol=lf
+*.bin binary
+*.png binary
