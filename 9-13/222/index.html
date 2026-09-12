@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>命令行世界 · 新生计算机基础讲座</title>
-<meta name="description" content="面向计算机新生的入门讲座：Windows 前置环境、Shell 基础命令、Git 版本控制、Neovim 编辑器，以及 C 语言从源码到可执行文件的四步过程。单文件离线页面。">
+<meta name="description" content="面向计算机新生的入门讲座：Windows 前置环境、Shell 基础命令、Git 版本控制、Neovim 编辑器，以及 C 语言从源码到可执行文件的四步过程；还没入手电脑的同学，可用小小容器（Tiny Container）在安卓手机上得到同一个 Linux 环境。单文件离线页面。">
 <meta name="theme-color" content="#f7f5ef">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23f7f5ef'/><text x='16' y='24' font-family='monospace' font-size='24' font-weight='bold' fill='%23c0402b' text-anchor='middle'>$</text></svg>">
 <script>document.documentElement.className += ' js';</script>
@@ -208,6 +208,12 @@
     border-radius:3px; padding:1px 5px;
   }
 
+  /* 正文里的链接：用一点朱砂标出来，跳转与外链一眼可见 */
+  .note a,.blk li a,.blk p a{
+    color:var(--accent);border-bottom:1px solid rgba(192,64,43,.32);
+  }
+  .note a:hover,.blk li a:hover,.blk p a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+
   /* ---------- 流程：方框 + 箭头 ---------- */
   .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0}
   .flow .box{
@@ -376,6 +382,7 @@
       <a href="#git">Git</a>
       <a href="#nvim">Neovim</a>
       <a href="#cc">C 编译</a>
+      <a href="#mobile">无电脑方案</a>
       <a href="#road">路线</a>
     </nav>
   </div>
@@ -390,14 +397,15 @@
     <div class="hero-copy">
       <div class="eyebrow">新生计算机基础讲座 · 2026</div>
       <h1>第一次走进<br>命令行世界</h1>
-      <p class="lede">服务器、评测机、别人的仓库，都只有文字。这一页先把一台全新的 Windows 变成工作台，再把四件基本功交到你手上。</p>
+      <p class="lede">服务器、评测机、别人的仓库，都只有文字。这一页先把一台全新的 Windows 变成工作台，再把四件基本功交到你手上；还没有电脑的同学，看 05 节的手机方案。</p>
 
       <nav class="toc">
         <a href="#setup"><span class="n">00</span><span class="t">Windows 前置环境</span><span class="d">镜像 · PATH</span></a>
         <a href="#shell"><span class="n">01</span><span class="t">Shell 基础命令</span><span class="d">终端 · 管道</span></a>
-        <a href="#git"><span class="n">02</span><span class="t">Git 版本控制</span><span class="d">三区 · 分支</span></a>
+        <a href="#git"><span class="n">02</span><span class="t">Git 版本控制</span><span class="d">三区 · 分支 · 远程</span></a>
         <a href="#nvim"><span class="n">03</span><span class="t">Neovim 编辑器</span><span class="d">模式编辑</span></a>
         <a href="#cc"><span class="n">04</span><span class="t">C 编译全过程</span><span class="d">四步流水线</span></a>
+        <a href="#mobile"><span class="n">05</span><span class="t">手机上的 Linux</span><span class="d">无电脑 · 小小容器</span></a>
       </nav>
 
     </div>
@@ -434,6 +442,10 @@
       <div class="sec-idx">00</div>
       <h2>把新 Windows 变成工作台</h2>
       <p class="sec-sub">以下步骤是教程，不会在本机自动安装任何东西。照顺序完成，最后用一组命令确认环境，再进入 Shell、Git 和 C。</p>
+    </div>
+
+    <div class="blk reveal">
+      <div class="note good"><b>还没有自己的电脑？</b>先跳到 <a href="#mobile">05 手机上的 Linux</a>：一台安卓手机装上「小小容器」，就有一台 Debian，GCC、Git、Neovim 一个不少，本页后面的练习在手机上一样能做。等电脑到手，再回来走这一节。</div>
     </div>
 
     <div class="blk reveal">
@@ -687,7 +699,7 @@ $ cat note.txt | wc -l
     <div class="sec-head reveal">
       <div class="sec-idx">02</div>
       <h2>Git 版本控制</h2>
-      <p class="sec-sub">给代码一台时光机，也让多人在同一份代码上并行而不互相踩脚。</p>
+      <p class="sec-sub">给代码一台时光机：先用 add 与 commit 留下快照，再学会开分支，让没写完的东西不污染主线。</p>
     </div>
 
     <div class="blk reveal">
@@ -716,18 +728,83 @@ a1b2c3d feat: add hello world
     </div>
 
     <div class="blk reveal">
-      <h3>分支与远程</h3>
+      <h3>缓冲：分支到底是什么</h3>
+      <p>到这一步，你已经有一条一直在往前长的提交线了：每 <code>commit</code> 一次，线上就多一个点。但麻烦也在这儿——<b>线只有一条</b>。你想大改一版试试看，又怕改坏了回不去；如果还在这唯一的一条线上猛敲 <code>commit</code>，主线就被半成品污染了。</p>
+      <p>分支（branch）就是给这条线开一个岔路口：从一个提交点再长出第二条线，两条线各自往前走，互不打扰。想试新写法就岔出去，试成了再合回来，试砸了就把那条岔路丢掉，主线一直干净。</p>
+      <pre class="code" data-lang="text"><code id="cb-g2"></code></pre>
+      <script type="text/plain" data-target="cb-g2">        main
+         |
+ *---*---*
+          \
+           *---*
+               ^
+              dev
+
+每个 * 是一次 commit，点连起来就是这条分支的历史。
+那个拐弯就是“开分支”：dev 从 main 的最后一个 * 岔出去，之后各走各的。
+</script>
+      <p>关键要记住：分支<b>不是复制一份项目文件夹</b>。它只是一个指向某个提交的名字，新建分支瞬间完成、几乎不占空间；它也不是什么高级技巧，而是日常干活的基本姿势。</p>
       <div class="tbl-wrap">
         <table class="tbl">
-          <tr><th style="width:200px">命令</th><th>作用</th></tr>
-          <tr><td>git switch -c dev</td><td>新建并切到 dev 分支</td></tr>
-          <tr><td>git switch main</td><td>切回主分支</td></tr>
-          <tr><td>git merge dev</td><td>把 dev 合并进当前分支</td></tr>
-          <tr><td>git clone 地址</td><td>把远端仓库拷到本地</td></tr>
-          <tr><td>git push / pull</td><td>推送到远端 / 拉取别人的提交</td></tr>
+          <tr><th style="width:210px">你可能以为</th><th>其实是</th></tr>
+          <tr><td>分支 = 把项目复制一份</td><td>只是一个指向某次提交的指针，所以 <code>switch -c</code> 快得没有感觉</td></tr>
+          <tr><td><code>main</code> 是特殊的主分支</td><td><code>main</code> 只是默认名字，任何分支都能合并、也能删除</td></tr>
+          <tr><td>切分支只影响 Git 记录</td><td>切过去之后，磁盘上的文件<b>真的</b>会变成那条线的样子</td></tr>
         </table>
       </div>
-      <p>日常循环只有四步：<b>改代码 → add → commit → push</b>。动手前先 <code>pull</code> 一次。</p>
+      <div class="note">一句话：<b>commit 是存档点，分支是从某个存档点长出来的平行时间线，switch 就是在时间线之间跳。</b></div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>git switch：在时间线之间跳</h3>
+      <pre class="code" data-lang="bash"><code id="cb-g3"></code></pre>
+      <script type="text/plain" data-target="cb-g3">$ git branch            # 看有哪些分支，* 是当前所在
+* main
+$ git switch -c dev     # 新建 dev，并立刻切过去
+Switched to a new branch 'dev'
+$ git add hello.c
+$ git commit -m "feat: 试试新写法"
+$ git switch main       # 切回主线：文件立刻变回 main 的样子
+Switched to branch 'main'
+</script>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <tr><th style="width:210px">命令</th><th>作用</th></tr>
+          <tr><td>git branch</td><td>列出所有分支，<code>*</code> 标出你在哪条线上</td></tr>
+          <tr><td>git switch dev</td><td>切到已经存在的 dev 分支</td></tr>
+          <tr><td>git switch -c dev</td><td>新建 dev 并立刻切过去（最常用）</td></tr>
+          <tr><td>git switch -</td><td>在最近的两个分支之间来回跳</td></tr>
+          <tr><td>git merge dev</td><td>把 dev 合并进当前分支：站在 main 上执行，就是把岔路收进主线</td></tr>
+          <tr><td>git branch -d dev</td><td>删掉已经合并完的 dev</td></tr>
+        </table>
+      </div>
+      <p>亲手验证一次，比看十张图都管用——同一个文件，两个分支，两份内容：</p>
+      <pre class="code" data-lang="bash"><code id="cb-g4"></code></pre>
+      <script type="text/plain" data-target="cb-g4">$ echo "main 版" > hello.c
+$ git add hello.c && git commit -m "docs: main 版本"
+$ git switch -c dev
+$ echo "dev 版" > hello.c
+$ git add hello.c && git commit -m "docs: dev 版本"
+$ cat hello.c           # 看到的：dev 版
+$ git switch main
+$ cat hello.c           # 看到的：main 版 —— 切分支真的会换掉文件
+</script>
+      <div class="note warn">切分支前先把活干完：<code>add</code> + <code>commit</code>。带着没提交的改动切过去，Git 要么把它一起带到新分支、要么直接拒绝切换。</div>
+      <div class="note good">老教程里的 <code>git checkout -b dev</code> 和 <code>git switch -c dev</code> 是同一件事。Git 2.23 之后把 <code>checkout</code> 拆成了两个命令：<code>switch</code> 管换分支，<code>restore</code> 管还原文件，语义更清楚。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>远程仓库：把时间线搬到别人的机器上</h3>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <tr><th style="width:210px">命令</th><th>作用</th></tr>
+          <tr><td>git clone 地址</td><td>把远端仓库整个拷到本地（自带历史与分支）</td></tr>
+          <tr><td>git push</td><td>把本地的提交推到远端</td></tr>
+          <tr><td>git pull</td><td>把远端的新提交拉到本地</td></tr>
+          <tr><td>git log --oneline --graph --all</td><td>用图形看所有分支的走向，岔路一眼看清</td></tr>
+        </table>
+      </div>
+      <p>日常循环只有四步：<b>改代码 → add → commit → push</b>。动手前先 <code>pull</code> 一次。用分支干活时多一句：在 <code>dev</code> 上写完、提交完，切回 <code>main</code>，再 <code>git merge dev</code>。</p>
       <div class="note warn">两人改了同一处代码，合并会冲突：文件里出现 <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> 与 <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code> 标记的两份内容，删掉不要的，再 <code>add</code> + <code>commit</code>。这是常态，不是事故。</div>
     </div>
   </section>
@@ -817,10 +894,161 @@ Hello, world!
     </div>
   </section>
 
+  <!-- ===================== 手机上的 Linux（无电脑方案） ===================== -->
+  <section class="sec" id="mobile">
+    <div class="sec-head reveal">
+      <div class="sec-idx">05</div>
+      <h2>没有电脑，手机也是一台 Linux</h2>
+      <p class="sec-sub">还没入手电脑也能开工。在安卓手机或平板上装一个「小小容器」（Tiny Container），你会得到一台完整的 Debian：Shell、Git、GCC、Neovim 一个不少，前面几节的练习在手机上同样能做。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>原理：这是容器，不是模拟器</h3>
+      <p>小小容器把一整套 Linux（Debian 13 加 XFCE 桌面）打包进一个安卓应用，用 proot 直接在手机上运行里面的程序。<b>不需要 root，不需要刷机</b>：装好打开、等它初始化几分钟，就得到一台能装软件、能上网的 Linux，而且它和 Termux 可以共存、互不干扰。</p>
+      <div class="flow">
+        <span class="box">安卓手机<i>Android 9 以上</i></span><span class="ar">→</span>
+        <span class="box">小小容器 App<i>内置终端</i></span><span class="ar">→</span>
+        <span class="box">Debian 容器<i>proot，无需 root</i></span><span class="ar">→</span>
+        <span class="box">gcc / git / nvim<i>用 apt 安装</i></span>
+      </div>
+      <div class="note good"><b>为什么这就够用：</b>你在容器里敲的 <code>ls</code>、<code>gcc</code>、<code>git</code>、<code>nvim</code>，用法和电脑上、服务器上几乎完全一样。真正需要适应的只有外面那层壳——电脑上是 MSYS2 UCRT64，手机上是小小容器。</div>
+      <p>实质差别只有一处：手机是 ARM64，电脑多半是 x86-64。同一份 <code>hello.c</code>，两边编译出的机器码不同，但源码、命令、输出完全一样——这正好是 04 节那句话的现场演示。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>先确认手机能不能用</h3>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <tr><th style="width:210px">项目</th><th>要求</th></tr>
+          <tr><td>系统版本</td><td>Android 9（API 28）或更高；iPhone、iPad 不行，这个应用只有安卓版</td></tr>
+          <tr><td>处理器</td><td>必须是 arm64。近几年的手机基本都满足；x86 处理器的安卓平板用不了</td></tr>
+          <tr><td>存储空间</td><td>中文版安装包约 0.9 GB，装完还要解压出整套系统，建议预留 5 GB 以上</td></tr>
+          <tr><td>存储权限</td><td>首次启动会申请；同意后安卓存储会挂载到容器里的 <code>/mnt/sdcard</code></td></tr>
+          <tr><td>初始化时间</td><td>第一次打开要等内容解压，通常几分钟。插着电，别中途退出</td></tr>
+        </table>
+      </div>
+      <div class="note warn"><b>它不做什么：</b>不支持 Docker、systemd、chroot，也不是虚拟机（想跑 Windows 软件要另装 Hangover，不是这个方案的强项）。proot 方案本身有性能折扣——单文件练习、刷题、写作业完全够用，但别指望在手机上编译大型项目。</div>
+      <p>容器里的东西属于“随时可能丢”的一类。养成 02 节的习惯：<code>git commit</code> 之后 <code>git push</code>，代码放到远端，手机丢了也不怕。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>下载与安装</h3>
+      <pre class="code" data-lang="text"><code id="cb-m1"></code></pre>
+      <script type="text/plain" data-target="cb-m1">下载页（GitHub Releases）：
+https://github.com/Cateners/tiny_container/releases
+
+第一次用就选它（自带 Debian 13 + XFCE 桌面 + 中文，约 0.9 GB）：
+tiny-container-xfce-zh.apk
+
+只想先试试，或流量紧张（约 27 MB，不自带容器）：
+tiny-container.apk
+→ 之后到 https://github.com/tiny-computer/images 下载容器，
+  再用应用里的“导入”按钮装进来
+
+想体验别的桌面（约 2 GB）：
+tiny-container-gxde-zh.apk
+
+版本以 Releases 页面的最新稳定版为准，带 alpha 字样的预览版先不用。</script>
+      <p>下载完允许“安装未知来源的应用”，装好打开，按提示走完初始化，就进入桌面了。</p>
+      <ol>
+        <li><b>桌面</b>：XFCE，有文件管理器、浏览器、终端，像一个普通的电脑桌面。</li>
+        <li><b>内置终端</b>：命令行的入口。我们要练的东西都在这里，它和电脑上的终端等价。</li>
+        <li><b>功能 → AVNC</b>：屏幕显示太大或太小，在这里调缩放比例。</li>
+      </ol>
+      <div class="note">应用里已经准备好一批“快速命令”，点一下就自动安装浏览器、输入法、主题这些常用软件，想省事就用它。但下面的开发工具链，建议你自己用 <code>apt</code> 敲一遍——那就是最好的练习。</div>
+      <div class="note bad"><b>装第二个容器时必须换一个新代号：</b>代号重复会把旧容器<b>直接覆盖</b>，里面的代码彻底丢失，没有回收站。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>把工具链装进容器</h3>
+      <p>打开内置终端（或桌面里的 <code>xfce4-terminal</code>），先看清自己是谁、在哪，再一次装齐编译器、Git 和编辑器。</p>
+      <pre class="code" data-lang="bash"><code id="cb-m2"></code></pre>
+      <script type="text/plain" data-target="cb-m2">$ whoami
+tiny
+$ pwd
+/home/tiny
+
+$ sudo apt update
+$ sudo apt install -y build-essential git neovim
+
+$ gcc --version
+$ git --version
+$ nvim --version</script>
+      <div class="note good"><b>对照记忆：</b><code>apt</code> 是 Debian 的包管理器，地位相当于 MSYS2 里的 <code>pacman</code>；<code>build-essential</code> 一次给齐 <code>gcc</code>、<code>g++</code>、<code>make</code> 与标准库头文件，相当于 Windows 上那个 toolchain 包。</div>
+      <p>默认用户是 <code>tiny</code>，家目录 <code>/home/tiny</code>，<code>sudo</code> 不需要密码（预置容器的登录密码同样是 <code>tiny</code>），所以在这里几乎不用纠结权限问题。</p>
+      <div class="note warn"><b>这是便利，不是安全：</b>免密 <code>sudo</code> 加固定密码，是为了让新手少踩坑。别在容器里放真实密码、证件照、网银资料，也别把它当成存放重要文件的主力电脑。</div>
+      <p>如果 <code>apt update</code> 慢到让人想睡，再换一次软件源：</p>
+      <pre class="code" data-lang="bash"><code id="cb-m4"></code></pre>
+      <script type="text/plain" data-target="cb-m4">编辑软件源文件（Debian 13 用的是 deb822 格式）：
+$ sudo nvim /etc/apt/sources.list.d/debian.sources
+
+把里面的域名换成国内镜像，例如：
+ftp.cn.debian.org  →  mirrors.tuna.tsinghua.edu.cn
+
+换源写法参考（页面里可以直接选 Debian 版本）：
+https://mirrors.tuna.tsinghua.edu.cn/help/debian/
+
+改完再执行：
+$ sudo apt update</script>
+    </div>
+
+    <div class="blk reveal">
+      <h3>一一对应：手机上做和 00 节一样的事</h3>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <tr><th style="width:190px">这件事</th><th>Windows 工作台</th><th>手机上的小小容器</th></tr>
+          <tr><td>命令行窗口</td><td>Windows Terminal → MSYS2 UCRT64</td><td>应用内置终端，或桌面里的 <code>xfce4-terminal</code></td></tr>
+          <tr><td>家目录</td><td><code>C:\Users\你的用户名</code></td><td><code>/home/tiny</code></td></tr>
+          <tr><td>包管理器</td><td><code>pacman -S</code></td><td><code>sudo apt install</code></td></tr>
+          <tr><td>C 工具链</td><td><code>mingw-w64-ucrt-x86_64-toolchain</code></td><td><code>build-essential</code></td></tr>
+          <tr><td>版本控制</td><td>Git for Windows 安装器</td><td><code>sudo apt install git</code></td></tr>
+          <tr><td>编辑器</td><td><code>nvim-win64.msi</code></td><td><code>sudo apt install neovim</code></td></tr>
+          <tr><td>改 PATH</td><td>要手动把 <code>C:\msys64\ucrt64\bin</code> 加进用户 PATH</td><td>不用，<code>apt</code> 装完直接能用</td></tr>
+          <tr><td>看安卓上的文件</td><td>—</td><td>容器里的 <code>/mnt/sdcard</code>（需存储权限）</td></tr>
+          <tr><td>本页的真实终端</td><td><code>node server.cjs</code> 后访问 <code>127.0.0.1:3210</code></td><td>用不到：容器自带终端，不需要这一页的服务</td></tr>
+        </table>
+      </div>
+      <p>最后一行别误会：本页的真实终端只是给 Windows 同学“边看边敲”用的环境，命令本身完全一样。手机上没有 Node.js 服务器这一层，你直接用容器里的终端。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>手机上的第一次提交</h3>
+      <p>这一段和 02 节的第一次提交是同一套命令，只是换了一台机器来执行。写文件、编译、提交，一次走完：</p>
+      <pre class="code" data-lang="bash"><code id="cb-m3"></code></pre>
+      <script type="text/plain" data-target="cb-m3">$ mkdir -p ~/labs/my-lab && cd ~/labs/my-lab
+$ nvim hello.c          # i 进入插入模式，写完 Esc，再 :wq 保存退出
+$ gcc -Wall hello.c -o hello
+$ ./hello
+Hello, world!
+
+$ git init
+$ git config --global user.name "你的名字"
+$ git config --global user.email "你的邮箱"
+$ git add hello.c
+$ git commit -m "feat: hello on android"
+$ git log --oneline
+
+# 想让代码真正安全，再推到远端
+$ git remote add origin https://github.com/你的用户名/my-lab.git
+$ git push -u origin main</script>
+      <div class="note good"><b>这一步的价值：</b>手机上的代码只有 push 到远端才算真正存下来。容器可以被覆盖、手机可能丢，但 GitHub 上的仓库一直等你——换任何设备，<code>git clone</code> 一条命令就继续干活。</div>
+      <div class="note warn"><b>push 要的是令牌，不是密码：</b>GitHub 早就不接受账号密码。提示输入密码时，填 <b>Personal Access Token</b>（GitHub 的 Settings → Developer settings 里生成，勾上 <code>repo</code> 权限）。嫌麻烦就先在手机上只做 <code>commit</code>，回到电脑再 <code>push</code>。</div>
+      <p>练 Neovim 最好配个蓝牙或 OTG 键盘，横屏之后手感接近小电脑；只有软键盘时，先在手机上专攻 Shell 与 Git 这两块，编辑留给电脑。</p>
+    </div>
+
+    <div class="blk reveal">
+      <h3>三个最容易踩的坑</h3>
+      <div class="note bad"><b>编译到一半被系统杀掉：</b>安卓会回收后台进程，长任务被清掉是常态。把小小容器留在前台，并在系统设置里把它加入电池优化白名单，重要编译趁手机电量充足时做。</div>
+      <div class="note warn"><b>把容器当成唯一存档：</b>卸载应用、覆盖装容器、系统清理都可能带走数据。凡是舍不得丢的代码，一律 <code>push</code> 到远端。</div>
+      <div class="note good"><b>把它当成过渡方案，而不是替代品：</b>学校机房、图书馆的电脑、同学的电脑都该用起来；课程作业以老师指定的环境为准。好消息是——手机上练出来的手感，在这些地方可以无缝接上。</div>
+      <p>手机上的 Linux 不是“退而求其次”。它和真正的服务器离得更近：同一套 Shell、同一套 Git、同一个 GCC。先把它用熟，等你拿到自己的电脑时，需要重新学的只剩下安装步骤。</p>
+    </div>
+  </section>
+
   <!-- ===================== 路线 ===================== -->
   <section class="sec" id="road">
     <div class="sec-head reveal">
-      <div class="sec-idx">05</div>
+      <div class="sec-idx">06</div>
       <h2>学习路线</h2>
       <p class="sec-sub">别贪多。每天 10–20 分钟，两周就能在命令行世界里独立行走。</p>
     </div>
@@ -832,8 +1060,9 @@ Hello, world!
         <li><b>第 1–2 周</b>：<code>vimtutor</code> 每天 10 分钟，并且强迫自己用 nvim 写代码和笔记。</li>
         <li><b>第 2 周起</b>：所有作业都 <code>git init</code>，每次改动都提交。</li>
         <li><b>始终</b>：遇到 bug 先自己查 15 分钟，再去问人。</li>
+        <li><b>没有电脑</b>：按 <a href="#mobile">05 节</a>把环境装进手机，每天的练习照旧——工具是什么不重要，手感才重要。</li>
       </ol>
-      <div class="note good"><b>练习：</b>建一个 <code>my-lab</code> 仓库，写 <code>note.md</code> 提交两次，用 nvim 改一次，再把 04 节的四步编译亲手走一遍。</div>
+      <div class="note good"><b>练习：</b>建一个 <code>my-lab</code> 仓库，写 <code>note.md</code> 提交两次，用 nvim 改一次，再把 04 节的四步编译亲手走一遍。还没有电脑的同学，把这套动作搬到手机的容器里做一遍（见 <a href="#mobile">05 节</a>），效果完全一样。</div>
     </div>
 
     <div class="blk reveal">
@@ -850,7 +1079,7 @@ Hello, world!
 
     <footer class="site">
       <span>新生计算机基础讲座 · 单文件离线页面</span>
-  <span>Windows · Shell · Git · Neovim · C</span>
+      <span>Windows / Android · Shell · Git · Neovim · C</span>
     </footer>
   </section>
 
@@ -898,7 +1127,7 @@ Hello, world!
   var BASH_CMDS = ('pwd ls cd mkdir touch cp mv rm cat echo head tail less more grep wc sort uniq tr cut ' +
     'man which whereis whoami date clear history file find xargs sed awk tee chmod chown sudo su source export ' +
     'alias printf read test true false gcc cc clang make cmake git nvim vim nano python python3 node npm ' +
-    'pnpm yarn bun curl wget tar zip unzip ssh scp kill ps top htop exit help').split(' ');
+    'pnpm yarn bun curl wget tar zip unzip ssh scp kill ps top htop exit help apt apt-get dpkg systemctl').split(' ');
   var BASH_KW = ('if then else elif fi for while until do done case esac in function return local break continue').split(' ');
   var allCmds = {}, kwSet = {};
   BASH_CMDS.forEach(function (c) { allCmds[c] = 1; });
