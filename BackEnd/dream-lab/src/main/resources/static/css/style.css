@@ -1,0 +1,600 @@
+/* ============================================================
+   逐梦实验室 · 界面样式
+   配色与场景同源：冷白面板 / 石板蓝描边 / 天蓝强调 / 警示红点缀
+   界面像实验室仪器：白壳、蓝标、硬边像素、圆角一律为 0
+   z 层级：舞台 0 / HUD 20 / 终端 25 / 对话 30 / 面板 40 / toast 60 / 黑页 90
+   ============================================================ */
+
+@font-face {
+  font-family: 'Press Start 2P';
+  src: url('../fonts/press-start-2p.woff2') format('woff2');
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+:root {
+  --ink-deep: #2a3242;      /* 正文与最重描边 */
+  --navy: #3d4f6b;
+  --slate: #445577;
+  --steel: #8fa2c0;         /* 仪器外壳 */
+  --steel-light: #b8c6dd;
+  --sky: #66ccff;           /* 强调蓝 */
+  --sky-deep: #2f7fb0;
+  --pale: #ddeeff;
+  --snow: #f4f8fd;          /* 面板白 */
+  --lav: #aa99ff;
+  --wall: #e4eaf4;
+  --gold: #ffcd75;
+  --flame: #ef6735;
+  --life: #38b764;
+  --danger: #b13e53;
+  --warning: #d9534f;
+  --panel: #f4f8fd;
+  --border: #8fa2c0;
+  /* 字体分三档，各司其职：
+     pixel —— 界面铭牌、标题、按钮上的短标签
+     text  —— 正文：对话、旁白、说明（一律用它，且统一字号）
+     mono  —— 机器输出：终端、CRT 日志、数据表 */
+  --font-pixel: 'Press Start 2P', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-text: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB',
+               'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;
+  --prose-size: 14px;
+  --shadow:
+    2px 0 0 var(--ink-deep), -2px 0 0 var(--ink-deep),
+    0 2px 0 var(--ink-deep), 0 -2px 0 var(--ink-deep),
+    4px 4px 0 rgba(42, 50, 66, .22);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--wall);
+  font-family: var(--font-pixel);
+  color: var(--ink-deep);
+  user-select: none;
+  cursor: default;
+}
+
+#stage, #stage canvas {
+  position: fixed; inset: 0;
+  width: 100vw; height: 100vh;
+  image-rendering: pixelated;
+}
+
+/* ---------- HUD：像墙上的一块状态面板 ---------- */
+
+#hud {
+  position: fixed; top: 12px; left: 12px; z-index: 20;
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--snow);
+  border: 0;
+  box-shadow: var(--shadow);
+  padding: 10px 12px 12px;
+  min-width: 236px;
+  border-radius: 0;
+}
+#hud::before {
+  content: '逐梦实验室';
+  display: block;
+  font-size: 8px; letter-spacing: 1px;
+  color: var(--sky-deep);
+  background: var(--pale);
+  margin: -10px -12px 8px;
+  padding: 7px 12px 6px;
+}
+
+#shards-label {
+  font-size: 9px; color: var(--steel); letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+#shards-label span { color: var(--sky-deep); }
+#shards { display: flex; gap: 6px; }
+.shard {
+  width: 24px; height: 24px;
+  border: 2px solid var(--steel-light);
+  background: #eef3fa;
+  display: grid; place-items: center;
+  border-radius: 0;
+  transition: transform .18s, background .2s, border-color .2s;
+}
+.shard::before { content: ''; width: 8px; height: 8px; background: #c3cee0; transform: rotate(45deg); }
+.shard.lit {
+  color: var(--sky);
+  border-color: var(--sky-deep);
+  background: #e6f6ff;
+}
+.shard.lit::before { background: var(--sky); }
+.shard.lit.new { transform: scale(1.25); animation: shard-pop .4s; }
+@keyframes shard-pop { 0% { transform: scale(.3); } 70% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+#stability {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 9px; color: var(--navy);
+  padding-top: 4px;
+  border-top: 2px solid var(--pale);
+}
+#stability-bar {
+  flex: 1;
+  height: 10px;
+  border: 2px solid var(--steel);
+  background: #e6ecf6;
+  border-radius: 0;
+}
+#stability-fill {
+  height: 100%; width: 0%;
+  background: var(--warning);
+  transition: width .6s, background .6s;
+}
+#stability-fill.ok { background: var(--life); }
+
+/* ---------- 像素按钮：白壳蓝标 ---------- */
+
+.pixel-btn {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  color: var(--navy);
+  background: var(--snow);
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    2px 0 0 var(--steel), -2px 0 0 var(--steel),
+    0 2px 0 var(--steel), 0 -2px 0 var(--steel),
+    0 4px 0 var(--ink-deep);
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform .08s, background .15s, color .15s;
+}
+.pixel-btn:hover { background: #e9f4ff; color: var(--sky-deep); }
+.pixel-btn:active { transform: translateY(2px); box-shadow:
+    2px 0 0 var(--steel), -2px 0 0 var(--steel),
+    0 2px 0 var(--steel), 0 -2px 0 var(--steel); }
+.pixel-btn:disabled { opacity: .45; cursor: not-allowed; }
+.pixel-btn.tiny { font-size: 9px; padding: 5px 8px; }
+.pixel-btn.gold { background: #e9f4ff; color: var(--sky-deep); }
+
+#topbtns {
+  position: fixed; top: 14px; right: 14px; z-index: 20;
+  display: flex; gap: 8px;
+}
+
+/* ---------- 对话框：一块"实验记录板" ---------- */
+
+#dialog {
+  position: fixed; left: 0; right: 0; bottom: 22px; z-index: 30;
+  margin: 0 auto;
+  width: min(780px, 94vw);
+  display: flex; align-items: stretch; gap: 14px;
+  background: var(--snow);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--shadow);
+  padding: 16px 18px 14px;
+  min-height: 96px;
+}
+#dialog-face {
+  align-self: flex-end;         /* 立绘贴底，其余元素填满对话框高度 */
+  height: 86px; width: auto; max-width: 96px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  margin-bottom: -4px;
+  filter: drop-shadow(0 4px 8px rgba(42,50,66,.28));
+  flex: 0 0 auto;
+}
+#dialog-body {
+  /* 竖排容器：名字牌 + 正文 + 选项，全部按内容自然排布 */
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+}
+#dialog-text {
+  flex: 0 0 auto;              /* 不再压缩、不再滚动：有多大就显示多大 */
+  overflow: visible;
+  font-family: var(--font-text);
+  font-size: var(--prose-size); line-height: 1.8;
+  color: var(--ink-deep);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;      /* 长路径也能断行，不会横着顶出去 */
+  min-height: 44px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--steel-light) transparent;
+}
+#dialog-text::-webkit-scrollbar { width: 5px; }
+#dialog-text::-webkit-scrollbar-thumb { background: var(--steel-light); border-radius: 3px; }
+#dialog-text::-webkit-scrollbar-track { background: transparent; }
+#dialog-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+#dialog-choices .pixel-btn {
+  font-family: var(--font-text);
+  font-size: var(--prose-size);
+}
+#dialog-choices .pixel-btn.gold:not(.picked) {
+  background: var(--snow);
+  color: var(--navy);
+}
+#dialog-choices .pixel-btn.picked {
+  background: #e9f4ff;
+  color: var(--sky-deep);
+  box-shadow:
+    2px 0 0 var(--sky-deep), -2px 0 0 var(--sky-deep),
+    0 2px 0 var(--sky-deep), 0 -2px 0 var(--sky-deep),
+    0 4px 0 var(--ink-deep);
+}
+#dialog-next {
+  position: absolute; right: 0; bottom: -6px;
+  font-size: 8px; color: var(--navy);
+  opacity: .75;
+  animation: blink 1.1s infinite;
+}
+@keyframes blink { 50% { opacity: .25; } }
+
+/* 说话人标签：像门牌一样的小蓝牌 */
+#dialog-speaker {
+  /* 框内的常流小牌子：正文再长也不会把它顶出框外 */
+  align-self: flex-start;
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+  font-family: var(--font-text);
+  font-size: var(--prose-size);
+  background: var(--sky-deep);
+  color: #fff;
+  padding: 3px 9px;
+  border-radius: 0;
+  box-shadow: 0 2px 0 rgba(42,50,66,.18);
+}
+#dialog-speaker.echo, #dialog-speaker.rin { background: var(--sky-deep); }
+#dialog-speaker.grant { background: #c98a2b; }
+#dialog-speaker.narrator { background: var(--steel); }
+
+/* ---------- 终端：一台放在桌面上的仪器 ---------- */
+
+#console {
+  /* 摆在对话框上方：两者都是"要同时看"的东西，绝不能互相压住。
+     拖动标题栏即可移动它（位置由 JS 写入 left/top）。 */
+  position: fixed; right: 14px; bottom: 212px; z-index: 25;
+  width: min(620px, 94vw); height: 272px;
+  display: flex; flex-direction: column;
+  background: #0d1420;
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--shadow), inset 0 0 60px rgba(0,0,0,.5);
+}
+#console-head {
+  display: flex; align-items: center; gap: 8px;
+  cursor: move;                 /* 拖它就能把终端挪走 */
+  user-select: none;
+  background: #16283f;
+  border-bottom: 2px solid #0a1018;
+  padding: 8px 10px; font-size: 9px; color: #cfe3ff;
+}
+#console-hint {
+  flex: 1; text-align: right; margin-right: 2px;
+  font-size: 9px; color: #7d9ac0; font-family: var(--font-mono);
+}
+#console-dot {
+  width: 8px; height: 8px; border-radius: 0;
+  background: var(--life);
+  flex: 0 0 auto;
+}
+#console-log {
+  flex: 1; overflow-y: auto;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 11.5px; line-height: 1.7;
+  color: #c9d6e8;
+  user-select: text;
+  /* 极淡的扫描线：一眼看出这是块屏幕 */
+  background-image: repeating-linear-gradient(
+    to bottom, rgba(255,255,255,.022) 0 1px, transparent 1px 3px);
+  scrollbar-width: none;            /* 隐藏滚动条，但滚轮/触控板照样能滚 */
+}
+#console-log::-webkit-scrollbar { width: 0; height: 0; }
+/* 一次请求：方法徽标 + 路径 + 状态码 */
+.con-line { display: flex; align-items: baseline; gap: 8px; padding: 1px 0; }
+.con-method {
+  font-size: 9px; padding: 1px 5px; border-radius: 0;
+  background: #1e4a6b; color: #cbe9ff;
+}
+.con-method.m-post { background: #6b4a1e; color: #ffe6b8; }
+.con-path { color: #dfe9f7; word-break: break-all; }
+.con-status { margin-left: auto; font-size: 10px; }
+.con-status.ok { color: #7fe0a0; }
+.con-status.warn { color: #ffcf7a; }
+.con-status.err { color: #ff9a72; }
+/* 服务器返回的 JSON：左边一道竖线，像终端里的"引用块" */
+.con-res { color: #9fb6d2; white-space: pre-wrap; }
+.con-json {
+  color: #9fb6d2; white-space: pre-wrap;
+  border-left: 2px solid #26405c;
+  padding-left: 8px; margin: 2px 0 4px;
+}
+.con-err { color: #ff9a72; }
+.con-ok { color: #7fe0a0; }
+#console-inputrow {
+  display: flex; align-items: center; gap: 8px;
+  border-top: 2px solid #0a1018;
+  background: #0a1119;
+  padding: 8px 12px;
+}
+#console-prompt {
+  font-family: var(--font-mono);
+  color: #7fe0a0; font-size: 12px;
+}
+#console-input {
+  flex: 1;
+  background: transparent; border: none; outline: none;
+  color: var(--sky);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+#console-input::placeholder { color: #4a627f; }
+#bottombtns {
+  position: fixed; right: 14px; bottom: 14px; z-index: 24;
+  display: flex; gap: 8px; align-items: center;
+}
+#console-toggle.while-open { opacity: .35; }
+
+/* ---------- 覆盖层面板 ---------- */
+
+#overlay {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(42, 50, 66, .45);
+  backdrop-filter: blur(2px);
+  display: grid; place-items: center;
+}
+.pixel-panel {
+  width: min(880px, 94vw); max-height: 88vh;
+  display: flex; flex-direction: column;
+  background: var(--panel);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--shadow);
+}
+#panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--sky-deep);
+  padding: 11px 14px;
+  font-size: 11px; color: #f2f9ff;
+}
+#panel-body {
+  overflow-y: auto; padding: 16px 18px;
+  font-family: var(--font-text);
+  font-size: var(--prose-size); line-height: 1.9;
+  color: var(--ink-deep);
+  user-select: text;
+  scrollbar-width: none;
+}
+#panel-body::-webkit-scrollbar { width: 0; height: 0; }
+.pixel-panel.whisper-panel {
+  width: min(520px, 92vw);
+}
+.pixel-panel.whisper-panel #panel-body {
+  overflow: hidden;
+}
+#panel-body h3 { color: var(--sky-deep); font-size: 13px; margin: 12px 0 8px; }
+#panel-body p { margin-bottom: 8px; }
+#panel-body .hint { color: var(--steel); font-size: 12px; }
+
+/* 样本库 · 访客记录表 */
+table.journey {
+  width: 100%; border-collapse: collapse;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+table.journey th, table.journey td {
+  border: 1px solid var(--steel-light);
+  padding: 6px 8px; text-align: left;
+}
+table.journey th { color: var(--sky-deep); background: #e9f0fa; }
+table.journey tr:hover td { background: #eef5ff; }
+table.journey td.status-4, table.journey td.status-5 { color: var(--warning); }
+
+/* 监控中心 · CRT（保持荧光屏质感） */
+.crt {
+  background: #05140a;
+  border: 3px solid #1e4a2a;
+  box-shadow: inset 0 0 40px rgba(0, 255, 120, .08);
+  padding: 14px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px; line-height: 1.8;
+  color: #46d97a;
+  text-shadow: 0 0 4px rgba(70, 217, 122, .6);
+  max-height: 46vh; overflow-y: auto;
+}
+.crt .crt-line { padding: 1px 4px; cursor: pointer; white-space: pre-wrap; }
+.crt .crt-line:hover { background: rgba(70, 217, 122, .12); }
+.crt .crt-line.selected { background: rgba(70, 217, 122, .22); outline: 1px dashed #46d97a; }
+.crt .FATAL { color: #ff6b6b; text-shadow: 0 0 6px rgba(255, 80, 80, .7); }
+.crt .WARN  { color: #ffd166; }
+.crt .log-id { color: #2ea043; }
+.verdict-row { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
+.verdict-row input {
+  flex: 1; max-width: 260px;
+  background: #05140a; border: 2px solid #1e4a2a; color: #46d97a;
+  font-family: ui-monospace, monospace; font-size: 12px; padding: 7px 8px; outline: none;
+}
+
+/* 悄悄话信笺 */
+.whisper-box { padding: 4px 0 0; }
+.whisper-box textarea {
+  display: block; width: 100%; min-height: 120px; max-height: 240px;
+  background: #fff; color: var(--ink-deep);
+  border: 2px solid var(--steel);
+  font-family: var(--font-text); font-size: var(--prose-size); line-height: 1.8;
+  padding: 10px; outline: none; resize: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.whisper-box textarea::-webkit-scrollbar { width: 0; height: 0; }
+.whisper-box .whisper-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 10px;
+}
+.whisper-box .counter {
+  font-family: var(--font-text);
+  font-size: var(--prose-size);
+  color: var(--navy);
+  flex: 1;
+}
+.whisper-box .whisper-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.reset-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: 22px;
+}
+.reset-actions .pixel-btn { min-width: 120px; }
+
+/* 通关证书 */
+.certificate {
+  text-align: center; padding: 26px 20px;
+  border: 4px solid var(--sky-deep);
+  background: #fbfdff;
+  border-radius: 0;
+}
+.certificate h1 { font-size: 15px; color: var(--sky-deep); letter-spacing: 2px; }
+.certificate h2 { font-size: 8px; color: var(--steel); margin-top: 8px; letter-spacing: 1px; }
+.certificate .seal { font-size: 32px; margin: 14px 0; color: var(--sky-deep); }
+.certificate .lines { margin: 14px 0; font-size: 11px; line-height: 2.2; color: var(--ink-deep); }
+.certificate .qr {
+  margin: 14px auto 4px;
+  width: 116px; height: 116px;
+  border: 2px dashed var(--steel);
+  display: grid; place-items: center;
+  font-size: 9px; color: var(--steel);
+  background: #fff;
+}
+.certificate .footer { font-size: 9px; color: var(--steel); margin-top: 8px; }
+.certificate img.qr-img {
+  width: 200px; height: auto; max-height: 340px;
+  object-fit: contain;
+  image-rendering: auto;
+}
+
+/* ---------- Toast ---------- */
+
+#toast {
+  position: fixed; top: 92px; left: 50%; transform: translateX(-50%);
+  z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none;
+}
+.toast-item {
+  max-width: 78vw;
+  background: var(--snow);
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    2px 0 0 var(--warning), -2px 0 0 var(--warning),
+    0 2px 0 var(--warning), 0 -2px 0 var(--warning);
+  color: var(--ink-deep);
+  font-family: var(--font-text);
+  font-size: 13px; line-height: 1.8;
+  padding: 10px 16px;
+  box-shadow: var(--shadow);
+  white-space: pre-wrap;
+  animation: toast-in .25s;
+}
+.toast-item.good { border-color: var(--life); }
+@keyframes toast-in { from { transform: translateY(-12px); opacity: 0; } }
+
+/* ---------- 通用 ---------- */
+
+.hidden { display: none !important; }
+
+/* 崩坏中的页面：
+   抖动只发生在"世界"里（场景容器，见 world.js），界面本身保持稳定——
+   界面是要读、要点的东西，晃起来就没法用了。
+   这里只留一点颜色上的不对劲，提醒你世界还没修好。 */
+body.glitch .shard.lit { filter: hue-rotate(30deg); }
+body.glitch #stability-fill { filter: saturate(1.6) hue-rotate(-12deg); }
+body.glitch #console-dot { background: var(--warning); box-shadow: 0 0 8px rgba(217,83,79,.9); }
+@keyframes jitter {
+  0%   { transform: translate(0, 0) skewX(0); }
+  25%  { transform: translate(-1px, 1px) skewX(.4deg); }
+  50%  { transform: translate(1px, -1px); }
+  75%  { transform: translate(1px, 1px) skewX(-.4deg); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ---------- 全屏黑页（世界修复 / 通关之门 / 再来一次） ---------- */
+
+#interstitial {
+  position: fixed; inset: 0; z-index: 90;
+  background: #05070c;
+  display: grid; place-items: center;
+  animation: fade-in .5s;
+}
+@keyframes fade-in { from { opacity: 0; } }
+
+#inter-body {
+  width: min(620px, 88vw);
+  text-align: center;
+  color: #ddeeff;
+}
+#inter-title {
+  font-size: 18px; letter-spacing: 3px;
+  color: #eef6ff;
+  margin-bottom: 26px;
+}
+#inter-title:empty { display: none; margin: 0; }
+#inter-lines {
+  font-family: var(--font-text);
+  font-size: 16px; line-height: 2.2;
+  white-space: pre-wrap;
+  color: #b9cbe4;
+  margin-bottom: 30px;
+}
+#inter-lines.italic {
+  font-style: italic;
+  font-size: 20px;
+  color: #ddeeff;
+  margin-bottom: 0;
+  font-family: var(--font-text);
+}
+#inter-btn {
+  font-size: 12px; padding: 14px 26px;
+  background: #0d1626;
+  border-color: var(--sky);
+  color: var(--sky);
+  box-shadow: 0 0 0 2px rgba(102,204,255,.18), 0 6px 20px rgba(0,0,0,.6);
+  animation: gate-pulse 2.4s infinite;
+}
+#inter-btn:hover { background: #14243c; color: #eaf6ff; }
+@keyframes gate-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(102,204,255,.18), 0 0 0 rgba(102,204,255,0); }
+  50%      { box-shadow: 0 0 0 2px rgba(102,204,255,.35), 0 0 26px rgba(102,204,255,.35); }
+}
+#inter-btns {
+  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+}
+#inter-btns .pixel-btn {
+  min-width: 168px;
+  font-size: 12px;
+  padding: 14px 22px;
+}
+.pixel-btn.sky {
+  background: #0f2036; border-color: var(--sky); color: var(--sky);
+  font-size: 12px; padding: 13px 22px;
+  animation: gate-pulse 2.4s infinite;
+}
+.pixel-btn.sky:hover { background: #16304f; color: #eaf6ff; }
+.pixel-btn.sky.picked {
+  background: #16304f;
+  color: #eaf6ff;
+  box-shadow: 0 0 0 2px var(--sky), 0 0 0 4px #0d1626;
+}
+
+#inter-note {
+  margin-top: 18px; font-size: 9px; color: #6d84a6;
+  white-space: pre-wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shard.lit.new, #dialog-next, #inter-btn, .pixel-btn.sky, .toast-item {
+    animation: none !important;
+  }
+}

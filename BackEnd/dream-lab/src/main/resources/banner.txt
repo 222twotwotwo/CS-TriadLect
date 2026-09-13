@@ -1,0 +1,18 @@
+${AnsiColor.BRIGHT_CYAN}   +==================================================+
+${AnsiColor.BRIGHT_WHITE}   |                                                  |
+${AnsiColor.BRIGHT_WHITE}   |              ####                                |
+${AnsiColor.BRIGHT_WHITE}   |              ####                                |
+${AnsiColor.BRIGHT_WHITE}   |             ######                               |
+${AnsiColor.BRIGHT_WHITE}   |            ########                              |
+${AnsiColor.BRIGHT_WHITE}   |           #~~~~~~~~#                             |
+${AnsiColor.BRIGHT_WHITE}   |           ##########                             |
+${AnsiColor.BRIGHT_WHITE}   |                                                  |
+${AnsiColor.BRIGHT_WHITE}   |              逐 梦 实 验 室                      |
+${AnsiColor.BRIGHT_WHITE}   |             D R E A M   L A B                    |
+${AnsiColor.BRIGHT_WHITE}   |                                                  |
+${AnsiColor.BRIGHT_WHITE}   |   一台正在苏醒的服务器                           |
+${AnsiColor.BRIGHT_WHITE}   |   世界规则已加载： config/world.properties       |
+${AnsiColor.BRIGHT_WHITE}   |   打开 http://localhost:8080 进入实验室          |
+${AnsiColor.BRIGHT_WHITE}   |                                                  |
+${AnsiColor.BRIGHT_CYAN}   +==================================================+
+${AnsiColor.GREEN}   一切就绪，等你推门。${AnsiColor.DEFAULT}
