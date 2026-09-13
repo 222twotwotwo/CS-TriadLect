@@ -1,0 +1,15 @@
+build/
+build-cmake/
+saved/
+shots/*
+!shots/.gitkeep
+tools/.cache/
+# 设计与实现计划：只作本地存档，不进仓库
+docs/design/
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.o
+.DS_Store
+.vscode/settings.json
