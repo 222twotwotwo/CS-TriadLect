@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>逐梦实验室 · Dream Lab</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2316283f'/><rect x='6' y='2' width='4' height='3' fill='%23ddeeff'/><rect x='5' y='5' width='6' height='1' fill='%23ddeeff'/><rect x='4' y='6' width='8' height='7' fill='%23eef2ff'/><rect x='5' y='6' width='1' height='3' fill='%23ffffff'/><rect x='5' y='9' width='6' height='3' fill='%2366ccff'/><rect x='5' y='11' width='6' height='1' fill='%232f7fb0'/><rect x='3' y='13' width='10' height='1' fill='%238fa2c0'/></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- PixiJS 渲染的像素世界（实验室、咕博士、星野凛、奶先生、崩坏特效都在这里） -->
+<div id="stage"></div>
+
+<!-- HUD：碎片收集栏 + 世界稳定度 -->
+<div id="hud" class="hidden">
+  <div id="shards-label">记忆碎片 <span id="shards-count">0 / 7</span></div>
+  <div id="shards"></div>
+  <div id="stability">
+    <span id="stability-label">世界稳定度</span>
+    <div id="stability-bar"><div id="stability-fill"></div></div>
+    <span id="stability-num">0%</span>
+  </div>
+</div>
+
+<!-- 右上角功能按钮 -->
+<div id="topbtns" class="hidden">
+  <button id="btn-archive" class="pixel-btn hidden">样本库</button>
+  <button id="btn-monitor" class="pixel-btn hidden">监控</button>
+  <button id="btn-world" class="pixel-btn hidden">查看问题</button>
+</div>
+
+<!-- 底部对话框（所有剧情文本都走这里；左侧是角色立绘） -->
+<div id="dialog" class="hidden">
+  <img id="dialog-face" alt="星野凛" class="hidden">
+  <div id="dialog-body">
+    <div id="dialog-speaker"></div>
+    <div id="dialog-text"></div>
+    <div id="dialog-choices"></div>
+    <div id="dialog-next" class="hidden">▼ 点击继续</div>
+  </div>
+</div>
+
+<!-- 终端抽屉：像黑客一样直接和服务器对话 -->
+<div id="console" class="hidden">
+  <div id="console-head">
+    <span id="console-dot"></span>
+    <span id="console-hint">↑↓ 翻历史</span>
+    <button id="console-clear" class="pixel-btn tiny">清空</button>
+    <button id="console-close" class="pixel-btn tiny">×</button>
+  </div>
+  <div id="console-log"></div>
+  <div id="console-inputrow">
+    <span id="console-prompt">λ</span>
+    <input id="console-input" spellcheck="false" autocomplete="off"
+           placeholder="GET /rin/hello">
+  </div>
+</div>
+<div id="bottombtns" class="hidden">
+  <button id="btn-reset" class="pixel-btn">重置进度</button>
+  <button id="console-toggle" class="pixel-btn">终端</button>
+</div>
+
+<!-- 全屏覆盖层：源码 / 档案馆 / 监控中心 / 证书 -->
+<div id="overlay" class="hidden">
+  <div id="panel" class="pixel-panel">
+    <div id="panel-head"><span id="panel-title"></span><button id="panel-close" class="pixel-btn tiny">×</button></div>
+    <div id="panel-body"></div>
+  </div>
+</div>
+
+<!-- 全屏黑页：世界修复、通关之门、以及"再来一次"的询问都走这里 -->
+<div id="interstitial" class="hidden">
+  <div id="inter-body">
+    <h1 id="inter-title"></h1>
+    <div id="inter-lines"></div>
+    <div id="inter-btns"></div>
+    <button id="inter-btn" class="pixel-btn"></button>
+    <div id="inter-note"></div>
+  </div>
+</div>
+
+<!-- 轻提示（403 的嘲讽、报错的人话版都从这里飘出） -->
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8.6.6/dist/pixi.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
