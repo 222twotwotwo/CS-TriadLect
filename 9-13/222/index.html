@@ -465,6 +465,7 @@
           <tr><th style="width:150px">软件</th><th style="width:210px">官网下载页</th><th style="width:230px">国内镜像 / 替代</th><th>图形化安装要点</th></tr>
           <tr><td>Git for Windows</td><td><a href="https://git-scm.com/download/win" target="_blank" rel="noopener">git-scm.com/download/win</a></td><td><a href="https://registry.npmmirror.com/binary.html?path=git-for-windows/" target="_blank" rel="noopener">npmmirror Git 镜像</a></td><td>下载 64 位安装器；默认选项会加入 PATH，并自带 Git Bash 和 Vim。</td></tr>
           <tr><td>MSYS2</td><td><a href="https://www.msys2.org/#installation" target="_blank" rel="noopener">msys2.org/#installation</a></td><td><a href="https://mirrors.ustc.edu.cn/msys2/distrib/x86_64/" target="_blank" rel="noopener">中科大 MSYS2 镜像</a></td><td>下载 <code>msys2-x86_64-*.exe</code>；默认安装到 <code>C:\msys64</code>，GCC 仍需第 2 步命令安装。</td></tr>
+          <tr><td>Visual Studio Build Tools</td><td><a href="https://visualstudio.microsoft.com/visual-cpp-build-tools/" target="_blank" rel="noopener">visualstudio.microsoft.com</a></td><td>官网直链</td><td>可选；安装“使用 C++ 的桌面开发”工作负载，获得 MSVC 编译器，不需要安装完整 Visual Studio IDE。</td></tr>
           <tr><td>Node.js LTS</td><td><a href="https://nodejs.org/en/download" target="_blank" rel="noopener">nodejs.org/download</a></td><td><a href="https://mirrors.huaweicloud.com/nodejs/" target="_blank" rel="noopener">华为云 Node.js 镜像</a></td><td>选择 Windows LTS 安装器；默认选项会自动加入 PATH。</td></tr>
           <tr><td>Bun</td><td><a href="https://bun.com/download/" target="_blank" rel="noopener">bun.com/download</a></td><td>第 3 步的 <code>npm install --global bun --registry=...</code></td><td>只有要运行根目录 Vue 项目时才需要；npm 镜像通常比官网直链稳定。</td></tr>
         </table>
@@ -515,6 +516,15 @@ C:\msys64\usr\bin\bash.exe -lc "pacman -Sy --needed --noconfirm mingw-w64-ucrt-x
 
 powershell -NoProfile -Command "$p=[Environment]::GetEnvironmentVariable('Path','User'); if(($p -split ';') -notcontains 'C:\msys64\ucrt64\bin'){[Environment]::SetEnvironmentVariable('Path',($p.TrimEnd(';')+';C:\msys64\ucrt64\bin').Trim(';'),'User')}"</script>
       <div class="note warn"><b>PATH 写入后必须重开 CMD。</b>这里只添加 <code>C:\msys64\ucrt64\bin</code>，不要把 <code>C:\msys64\usr\bin</code> 加进 Windows PATH，否则可能出现命令版本或 DLL 冲突。</div>
+    </div>
+
+    <div class="blk reveal">
+      <h3>可选：Visual Studio Build Tools</h3>
+      <p>如果课程或项目要求 MSVC 编译器，可以补装 Visual Studio Build Tools。它提供 <code>cl</code>、<code>nmake</code> 和 Windows SDK，但不会提供 <code>gcc</code>；本页默认的 GCC 流程仍然使用 MSYS2。</p>
+      <pre class="code" data-lang="text"><code id="cb-p2b"></code></pre>
+      <script type="text/plain" data-target="cb-p2b">:: 在 CMD 中执行；会安装“使用 C++ 的桌面开发”推荐组件
+winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended" --accept-package-agreements --accept-source-agreements</script>
+      <div class="note">安装完成后，从开始菜单打开 <b>Developer Command Prompt for VS 2022</b>，输入 <code>cl</code> 检查 MSVC。普通 CMD 默认找不到 <code>cl</code>，这是正常现象。</div>
     </div>
 
     <div class="blk reveal">
