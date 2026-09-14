@@ -1,0 +1,14 @@
+# 运行环境
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ruff_cache/
+.pytest_cache/
+dist/
+build/
+
+# 运行产物
+# 会话日志：这是使用者自己的记录，不该进版本库。
+.dugentx/
+*.jsonl

@@ -1,0 +1,117 @@
+# DugentX 的组合配置。
+#
+# 这里只声明「装了哪些插件」和「每个插件的配置」。
+# **装载顺序不写在这里**——它由每个插件声明的 inject 推出来：
+# 需要 ctx.tools 的插件，一定排在提供 ctx.tools 的插件后面。
+# 手写启动顺序是不可拔插的根源，所以在 DugentX 里根本没有地方写它。
+#
+# 每一行都可以按 id 被 patch 覆盖（见文件末尾），也可以整行 disabled。
+
+plugins:
+  # ---------------------------------------------------------------- 内核五缝
+  - id: tools
+    plugin: dugentx.plugins.tools
+
+  - id: session
+    plugin: dugentx.plugins.session
+    config:
+      directory: .dugentx/sessions
+
+  - id: prompt
+    plugin: dugentx.plugins.prompt
+
+  - id: llm
+    plugin: dugentx.plugins.llm
+    config:
+      adapter: anyllm
+      model: mistral-small-latest
+      provider: mistral
+      # 不要在这里写 key。适配器只读环境变量 MISTRAL_API_KEY。
+
+  - id: agent-loop
+    plugin: dugentx.providers.agent_loop_basic
+
+  # ---------------------------------------------------------------- 动手三缝
+  - id: fs
+    plugin: dugentx.plugins.fs
+    config:
+      root: .
+      extra_roots:
+        - examples
+      max_bytes: 2000000
+
+  - id: shell
+    plugin: dugentx.plugins.shell
+    config:
+      root: .
+      timeout: 60
+      # 白名单留空 = 不按前缀限制，只挡明显危险的那几类。
+      # 想要更紧就写成 allow_prefixes: ["python", "pytest", "git status"]
+
+  - id: permissions
+    plugin: dugentx.plugins.permissions
+    config:
+      mode: policy
+      levels:
+        read: auto
+        write: confirm
+        network: confirm
+        dangerous: confirm
+      # mode: policy 表示「按固定答案回答」。演示和 CI 用它。
+      # 真人用的模式是 interactive：写操作会停下来问你一句。
+      answers:
+        auto: allow
+        confirm: allow
+        deny: refuse
+
+  # ---------------------------------------------------------------- 进阶三缝
+  - id: compaction
+    plugin: dugentx.plugins.compaction
+    config:
+      prune_tool_results: true
+      keep_recent_tool_lines: 12
+      summarize: true
+      truncate: true
+
+  - id: skill
+    plugin: dugentx.plugins.skill
+    config:
+      directories:
+        - examples/skills
+
+  - id: subagent
+    plugin: dugentx.plugins.subagent
+    config:
+      max_steps: 12
+
+  # ---------------------------------------------------------------- agent
+  - id: agent
+    plugin: dugentx.plugins.agent
+    config:
+      model: mistral-small-latest
+      max_steps: 24
+      context_budget_tokens: 60000
+      # 想让它一开始只看见一部分工具，就用 tool_allow 当白名单。
+      # tool_deny: [run_command]
+
+  # ---------------------------------------------------------------- 工具包
+  # 每个工具包各占一行，各自声明自己需要哪些服务。
+  # 拔掉其中一行，那个能力就从模型眼前消失了——不用改循环，不用重启。
+  - id: fs-tools
+    plugin: dugentx.tools.fs_tools
+
+  - id: shell-tools
+    plugin: dugentx.tools.shell_tools
+
+  - id: skill-tools
+    plugin: dugentx.tools.skill_tools
+
+  - id: subagent-tools
+    plugin: dugentx.tools.subagent_tools
+
+  - id: self-extension
+    plugin: dugentx.plugins.self_extension
+
+# 按 id 覆盖某一行。整行 config 替换，不做深合并——
+# 深合并会让「删掉一个键」变成一件说不清楚的事。
+patch: []

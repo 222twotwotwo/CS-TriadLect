@@ -1,0 +1,46 @@
+[project]
+name = "dugentx"
+version = "0.1.0"
+description = "DugentX —— 一个可拔插的 Agent harness，LLM 层只依赖 any-llm，其余全部自造"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    # LLM 层唯一的外部依赖：DugentX 不自己构造任何 HTTP 请求。
+    "any-llm-sdk>=0.1",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# 抓网页工具用；不装也能跑，只是没有 web_fetch
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+dugentx = "dugentx.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dugentx"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# RUF001/2/3 是「可疑的相似字符」检查：全角逗号、全角括号在它眼里是「歧义字符」。
+# 这个项目的注释和文档本来就是中文，这几条规则会把每一行中文都报一遍。
+# 关掉它们，其余规则照常。
+ignore = ["RUF001", "RUF002", "RUF003"]
