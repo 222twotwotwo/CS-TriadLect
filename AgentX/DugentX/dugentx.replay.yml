@@ -1,0 +1,118 @@
+# 无 key 演示组合：把 llm 那一行换成回放适配器，其余全是真的。
+#
+#   uv run dugentx -c dugentx.replay.yml run "读一下 hello.txt，然后教我怎么写提交信息"
+#
+# 值得注意的地方：**只有模型是假的。** 工具真的执行、结果真的回填、
+# 日志真的追加、权限真的过一道。所以这个配置既能当离线演示，
+# 也能当端到端的冒烟测试用。
+#
+# 它按顺序演示四件事：
+#   1. 一个真工具被调用（read_file）；
+#   2. agent 在会话中途给自己挂上一个插件（manage_plugin + skill）；
+#   3. 挂上之后，**新工具在同一会话里立刻可用**（use_skill）；
+#   4. 收尾回答。
+# 第 2 到第 3 步之间，系统提示词里的工具清单会变，循环会把那次变化
+# 记成一条 system/message —— 你用 `dugentx replay <id>` 就能看见。
+
+plugins:
+  - id: tools
+    plugin: dugentx.plugins.tools
+
+  - id: session
+    plugin: dugentx.plugins.session
+    config:
+      directory: .dugentx/sessions
+
+  - id: prompt
+    plugin: dugentx.plugins.prompt
+
+  - id: llm
+    plugin: dugentx.plugins.llm
+    config:
+      adapter: replay
+      # 脚本一轮一次调用，按顺序取。
+      replay:
+        on_exhausted: error
+        # 注意 `- -` 这个写法：外层是「一轮」，内层是「这一轮里的若干增量」。
+        # 文本用带 \n 的引号串而不是块标量——块标量在两层嵌套里对缩进很敏感，
+        # 改一次就要重数一次空格。
+        turns:
+          - - tool_call: read_file
+              arguments:
+                path: examples/workspace/hello.txt
+          - - tool_call: manage_plugin
+              arguments:
+                action: mount
+                module: dugentx.plugins.skill
+                plugin_id: skill-provider
+                config:
+                  directories: [examples/skills]
+          - - tool_call: manage_plugin
+              arguments:
+                action: mount
+                module: dugentx.tools.skill_tools
+                plugin_id: skill-tools
+          - - tool_call: use_skill
+              arguments:
+                name: writing-a-commit-message
+          - - text: "读完了 hello.txt。那是一份说明，讲的正是「回放模式下只有模型是假的，其余每一层都是真的」。\n\n然后我在会话中途给自己装了两样东西：先是技能**提供者**（dugentx.plugins.skill），再是需要提供者的**工具包**（dugentx.tools.skill_tools）。所以 use_skill 这个工具是挂到第四轮才出现的——不是重启，是模型眼前的工具表当场变了。\n\n这一步也顺便说明了缝的三个角色：提供者、消费者、以及用它们的模型。只装提供者，模型是看不见任何东西的。\n\n写提交信息的那份技能已经拉进上下文了，可以直接照它做。"
+
+  - id: agent-loop
+    plugin: dugentx.providers.agent_loop_basic
+
+  - id: fs
+    plugin: dugentx.plugins.fs
+    config:
+      root: .
+      max_bytes: 2000000
+
+  - id: shell
+    plugin: dugentx.plugins.shell
+    config:
+      timeout: 30
+
+  - id: permissions
+    plugin: dugentx.plugins.permissions
+    config:
+      mode: policy
+      # 代码里的**默认**是 `dangerous: deny`——能改自己工具箱的动作默认被拒。
+      # 这里显式放宽到 confirm：仍然要过一道闸，只是这道闸在无人值守时自动放行，
+      # 好让演示能一口气跑完。真人的配置应该是 `mode: interactive`，
+      # 那时这一步会停下来问你一句。
+      levels:
+        read: auto
+        write: confirm
+        network: confirm
+        dangerous: confirm
+      answers:
+        auto: allow
+        confirm: allow
+        deny: refuse
+
+  - id: compaction
+    plugin: dugentx.plugins.compaction
+
+  - id: subagent
+    plugin: dugentx.plugins.subagent
+
+  - id: agent
+    plugin: dugentx.plugins.agent
+    config:
+      max_steps: 12
+      # 回放适配器没有模型名，循环会回落到注册表上的默认值。
+
+  - id: fs-tools
+    plugin: dugentx.tools.fs_tools
+
+  - id: shell-tools
+    plugin: dugentx.tools.shell_tools
+
+  - id: subagent-tools
+    plugin: dugentx.tools.subagent_tools
+
+  # 注意：这里**没有**预先装 skill 插件，也没有装 skill 工具。
+  # 它们是在第二轮由 agent 自己挂上去的。
+  - id: self-extension
+    plugin: dugentx.plugins.self_extension
+
+patch: []

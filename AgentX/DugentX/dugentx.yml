@@ -1,0 +1,133 @@
+# DugentX 的组合配置。
+#
+# 这里只声明「装了哪些插件」和「每个插件的配置」。
+# **装载顺序不写在这里**——它由每个插件声明的 inject 推出来：
+# 需要 ctx.tools 的插件，一定排在提供 ctx.tools 的插件后面。
+# 手写启动顺序是不可拔插的根源，所以在 DugentX 里根本没有地方写它。
+#
+# 每一行都可以按 id 被 patch 覆盖（见文件末尾），也可以整行 disabled。
+
+plugins:
+  # ---------------------------------------------------------------- 内核五缝
+  - id: tools
+    plugin: dugentx.plugins.tools
+
+  - id: session
+    plugin: dugentx.plugins.session
+    config:
+      directory: .dugentx/sessions
+
+  - id: prompt
+    plugin: dugentx.plugins.prompt
+
+  - id: llm
+    plugin: dugentx.plugins.llm
+    config:
+      adapter: anyllm
+      # DeepSeek 在 any-llm 里是「已验证」的 provider：流式、工具调用、
+      # 思考链都支持，上下文 1M。默认用 deepseek-flash（快、便宜、默认开思考）；
+      # 要更重的推理就换 deepseek-v4-pro。
+      #
+      # 换任何一家都只是改这三行——DugentX 里没有任何一处手写的 HTTP 请求。
+      model: deepseek-flash
+      provider: deepseek
+      api_key_env: DEEPSEEK_API_KEY
+      # 不要在这里写 key。适配器只读环境变量，缺了就装载失败。
+      # 国内直连不便时可以设 DEEPSEEK_API_BASE 走自己的网关。
+
+  - id: agent-loop
+    plugin: dugentx.providers.agent_loop_basic
+
+  # ---------------------------------------------------------------- 动手三缝
+  - id: fs
+    plugin: dugentx.plugins.fs
+    config:
+      root: .
+      extra_roots:
+        - examples
+      max_bytes: 2000000
+
+  - id: shell
+    plugin: dugentx.plugins.shell
+    config:
+      root: .
+      timeout: 60
+      # 白名单留空 = 不按前缀限制，只挡明显危险的那几类。
+      # 想要更紧就写成 allow_prefixes: ["python", "pytest", "git status"]
+
+  - id: human
+    plugin: dugentx.plugins.human
+    config:
+      allow_always: true
+    # 这是「此刻人怎么跟 agent 说话」的那一行。
+    # 想换成编码 TUI，改这一行——见 dugentx.tui.yml，那才是这件事的答案。
+
+  - id: permissions
+    plugin: dugentx.plugins.permissions
+    config:
+      # channel = 真去问人，而不是按固定答案表回答。
+      # 一个会改你文件的 agent，写之前应该问你一句；装个 TUI 的话，
+      # 那一句就弹在同一个终端里。
+      mode: channel
+      levels:
+        read: auto
+        write: confirm
+        network: confirm
+        dangerous: confirm
+
+  # ---------------------------------------------------------------- 进阶三缝
+  - id: compaction
+    plugin: dugentx.plugins.compaction
+    config:
+      prune_tool_results: true
+      keep_recent_tool_lines: 12
+      summarize: true
+      truncate: true
+
+  - id: skill
+    plugin: dugentx.plugins.skill
+    config:
+      directories:
+        - examples/skills
+
+  - id: subagent
+    plugin: dugentx.plugins.subagent
+    config:
+      max_steps: 12
+
+  # ---------------------------------------------------------------- agent
+  - id: agent
+    plugin: dugentx.plugins.agent
+    config:
+      model: deepseek-flash
+      max_steps: 24
+      context_budget_tokens: 60000
+      # 想让它一开始只看见一部分工具，就用 tool_allow 当白名单。
+      # tool_deny: [run_command]
+
+  # ---------------------------------------------------------------- 工具包
+  # 每个工具包各占一行，各自声明自己需要哪些服务。
+  # 拔掉其中一行，那个能力就从模型眼前消失了——不用改循环，不用重启。
+  - id: fs-tools
+    plugin: dugentx.tools.fs_tools
+
+  - id: shell-tools
+    plugin: dugentx.tools.shell_tools
+
+  - id: skill-tools
+    plugin: dugentx.tools.skill_tools
+
+  - id: subagent-tools
+    plugin: dugentx.tools.subagent_tools
+
+  - id: ask-tools
+    plugin: dugentx.tools.ask_tools
+    # 给模型一只「问人」的手。它走的是和审批同一条 human 通道，
+    # 所以装 TUI 的时候，模型的问题也弹在同一个界面里。
+
+  - id: self-extension
+    plugin: dugentx.plugins.self_extension
+
+# 按 id 覆盖某一行。整行 config 替换，不做深合并——
+# 深合并会让「删掉一个键」变成一件说不清楚的事。
+patch: []

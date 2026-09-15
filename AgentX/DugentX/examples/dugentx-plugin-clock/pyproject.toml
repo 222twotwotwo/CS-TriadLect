@@ -1,0 +1,23 @@
+[project]
+name = "dugentx-plugin-clock"
+version = "0.1.0"
+description = "DugentX 插件包示例：把当前时间告诉模型（一个 now 工具 + 一句提示词）"
+requires-python = ">=3.11"
+
+# 真实发布出去的插件包应该在这里写 `dependencies = ["dugentx>=0.1"]`。
+# 这个示例故意省略：它是从本仓库**以路径方式**装进来的，没有 dugentx 发布在
+# PyPI 上可解析；写了这一行反而会让本地安装失败。
+# 省略的代价要说清楚——它换来的是一个装着玩的示例，代价是它不能独立分发。
+dependencies = []
+
+[project.entry-points."dugentx.plugins"]
+# 组名 `dugentx.plugins` 是**对外契约**：DugentX 按它发现插件包。
+# 左边是插件在注册表里的名字（配置里就写它），右边是「模块:属性」。
+clock = "dugentx_plugin_clock:PLUGIN"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dugentx_plugin_clock"]

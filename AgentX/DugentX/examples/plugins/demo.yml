@@ -1,0 +1,36 @@
+# word_count 的演示组合：在无 key 的回放组合上，加一行自己的插件。
+#
+#   uv run dugentx -c examples/plugins/demo.yml plugins
+#   uv run dugentx -c examples/plugins/demo.yml run "数一下这句话"
+#
+# `extends` 的相对路径按**这份文件所在的目录**解析（装载器里是
+# `path.parent / extends`），所以 ../../dugentx.replay.yml 指向仓库根的那一份。
+# 基座的行先来，自己的 plugins 追加在后面，最后统一应用 patch。
+#
+# 基座的 llm 行用的脚本是「读文件 / 挂插件 / 用技能」，这里换成一段
+# 只调用 count_words 的脚本。注意 patch 是**整行 config 替换**，不是深合并——
+# 所以 adapter 和 replay 块要完整写一遍。
+
+extends: ../../dugentx.replay.yml
+
+plugins:
+  - id: word-count
+    plugin: examples.plugins.word_count
+    config:
+      min_length: 3
+      top: 3
+      # 标签决定 permissions 缝怎么分级：read 档默认 auto，直接放行。
+      # 想让它每次都要人点头，把这里改成 [write] 就行——改的是标签，不是策略。
+      labels: [read]
+
+patch:
+  - id: llm
+    config:
+      adapter: replay
+      replay:
+        on_exhausted: error
+        turns:
+          - - tool_call: count_words
+              arguments:
+                text: "the quick brown fox jumps over the lazy dog, and the dog barks"
+          - - text: "数完了。这句话里 the 出现最多，一共 3 次——这就是 count_words 工具干的事，它是 examples/plugins/word_count.py 挂上来的。"
