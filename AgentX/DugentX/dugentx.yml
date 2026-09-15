@@ -24,9 +24,16 @@ plugins:
     plugin: dugentx.plugins.llm
     config:
       adapter: anyllm
-      model: mistral-small-latest
-      provider: mistral
-      # 不要在这里写 key。适配器只读环境变量 MISTRAL_API_KEY。
+      # DeepSeek 在 any-llm 里是「已验证」的 provider：流式、工具调用、
+      # 思考链都支持，上下文 1M。默认用 deepseek-flash（快、便宜、默认开思考）；
+      # 要更重的推理就换 deepseek-v4-pro。
+      #
+      # 换任何一家都只是改这三行——DugentX 里没有任何一处手写的 HTTP 请求。
+      model: deepseek-flash
+      provider: deepseek
+      api_key_env: DEEPSEEK_API_KEY
+      # 不要在这里写 key。适配器只读环境变量，缺了就装载失败。
+      # 国内直连不便时可以设 DEEPSEEK_API_BASE 走自己的网关。
 
   - id: agent-loop
     plugin: dugentx.providers.agent_loop_basic
@@ -48,21 +55,25 @@ plugins:
       # 白名单留空 = 不按前缀限制，只挡明显危险的那几类。
       # 想要更紧就写成 allow_prefixes: ["python", "pytest", "git status"]
 
+  - id: human
+    plugin: dugentx.plugins.human
+    config:
+      allow_always: true
+    # 这是「此刻人怎么跟 agent 说话」的那一行。
+    # 想换成编码 TUI，改这一行——见 dugentx.tui.yml，那才是这件事的答案。
+
   - id: permissions
     plugin: dugentx.plugins.permissions
     config:
-      mode: policy
+      # channel = 真去问人，而不是按固定答案表回答。
+      # 一个会改你文件的 agent，写之前应该问你一句；装个 TUI 的话，
+      # 那一句就弹在同一个终端里。
+      mode: channel
       levels:
         read: auto
         write: confirm
         network: confirm
         dangerous: confirm
-      # mode: policy 表示「按固定答案回答」。演示和 CI 用它。
-      # 真人用的模式是 interactive：写操作会停下来问你一句。
-      answers:
-        auto: allow
-        confirm: allow
-        deny: refuse
 
   # ---------------------------------------------------------------- 进阶三缝
   - id: compaction
@@ -88,7 +99,7 @@ plugins:
   - id: agent
     plugin: dugentx.plugins.agent
     config:
-      model: mistral-small-latest
+      model: deepseek-flash
       max_steps: 24
       context_budget_tokens: 60000
       # 想让它一开始只看见一部分工具，就用 tool_allow 当白名单。
@@ -108,6 +119,11 @@ plugins:
 
   - id: subagent-tools
     plugin: dugentx.tools.subagent_tools
+
+  - id: ask-tools
+    plugin: dugentx.tools.ask_tools
+    # 给模型一只「问人」的手。它走的是和审批同一条 human 通道，
+    # 所以装 TUI 的时候，模型的问题也弹在同一个界面里。
 
   - id: self-extension
     plugin: dugentx.plugins.self_extension

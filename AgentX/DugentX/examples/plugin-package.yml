@@ -1,0 +1,18 @@
+# 演示「一个插件就是一个 Python 包」——整份文件只加了一行。
+#
+# clock **不在这个仓库里**。它是一个独立安装的发行包
+# （`examples/dugentx-plugin-clock/`），通过标准的 entry point 被 DugentX 发现。
+# 所以下面 `plugin:` 写的是**包名**，不是模块路径：
+#
+#     - plugin: dugentx.plugins.fs     ← 仓库里的模块，老写法，照样能用
+#     - plugin: clock                  ← 已安装的插件包，走 meta 注册表
+#
+# 装它：uv sync --extra dev（它挂在 dev 依赖里，因为它是示例而不是本体）。
+
+extends: ../dugentx.replay.yml
+
+plugins:
+  - id: clock
+    plugin: clock
+    config:
+      zone: 本机时区

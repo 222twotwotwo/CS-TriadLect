@@ -31,41 +31,78 @@ dugentx/providers/llm_anyllm.py
 ```bash
 uv sync --extra dev
 
-# 无 key 也能跑：回放适配器，不联网
+# 什么 key 都不用：回放适配器，不联网，但工具真的执行
 uv run dugentx -c dugentx.replay.yml run "读一下 hello.txt 然后告诉我里面写了什么"
 
-# 真跑（需要一个 provider 的 key，只从环境变量读）
-export MISTRAL_API_KEY=...
-uv run dugentx run "看看这个目录里有什么，然后写一份 README 摘要"
+# 看一遍编码 TUI（同样不需要 key）
+uv run python examples/tui_demo.py
+
+# 真跑。默认接 DeepSeek，key 只从环境变量读
+export DEEPSEEK_API_KEY=sk-...
+uv run dugentx tui                     # 编码 TUI
+uv run dugentx run "看看这个目录里有什么"
 ```
+
+换模型只是改 `dugentx.yml` 里 `llm` 那三行（`model` / `provider` / `api_key_env`）。
+`deepseek-flash` 是默认——快、便宜、默认开思考链、上下文 1M，工具调用完整；
+要更重的推理就换 `deepseek-v4-pro`。走自建网关设 `DEEPSEEK_API_BASE`。
+换任何一家 provider 都不需要改 harness 一行代码。
 
 几条用来「看」的命令：
 
 ```bash
-uv run dugentx plugins                  # 这次到底装了哪些插件，按什么顺序
-uv run dugentx events                   # 事件目录：哪些是通知，哪些是中间件
-uv run dugentx sessions                 # 本地会话日志
-uv run dugentx replay <session_id>      # 把一个历史会话重新投影成模型看到的样子
-uv run pytest -q                        # 全部测试离线跑，不需要 key
+# 这几条不需要 key
+uv run dugentx -c dugentx.replay.yml plugins        # 这次装了哪些插件，按什么顺序
+uv run dugentx plugins --available                  # 这台机器上装了哪些插件包（不读配置、不需要 key）
+uv run dugentx events                               # 事件目录（纯目录，不装载任何东西）
+uv run dugentx sessions                             # 本地会话日志（直接读配置）
+
+uv run dugentx -c dugentx.replay.yml replay <session_id>   # 重新投影一个历史会话
+uv run pytest -q                                    # 全部测试离线跑
 ```
+
+**为什么要带 `-c dugentx.replay.yml`。** 不带 `-c` 时 `plugins` / `replay` 读默认的
+`dugentx.yml`，而那份组合声明了 `api_key_env: DEEPSEEK_API_KEY`；缺 key 它会
+**拒绝启动**。这是有意的：组合里写着要用的密钥不存在，就该在装载时大声说出来，
+而不是等到第一次请求模型才炸。手头没有 key 又想看组合长什么样，就用回放配置——
+它不声明任何密钥。
 
 `replay` 这条命令值得单独试一次。它把「模型可见 ⟺ 已记录」从一句口号变成你随时能跑一下、看一眼的东西。
 
 ---
 
+## 文档
+
+这一篇是概览。更细的拆成了几篇，都在 [`docs/`](docs/)：
+
+| | |
+|---|---|
+| [设计思路](docs/architecture.md) | 为什么内核是七个文件、为什么「注册必须能撤销」是全部 |
+| [缝的参考](docs/seams.md) | 12 条缝的方法签名、谁实现、谁消费、怎么换掉 |
+| [事件目录](docs/events.md) | 每个事件谁发、谁在听（**自动生成**，改了代码不同步就会失败） |
+| [配置参考](docs/configuration.md) | 每个插件的配置项与默认值，`extends` 与 `patch` 的确切语义 |
+| [写一个插件](docs/writing-a-plugin.md) | 一个完整例子，带你走一遍，附跑通的输出；模块与包两种形态 |
+| [编码 TUI](docs/tui.md) | 那个终端界面是怎么**长出来的**、怎么启动、键位、边界 |
+
 ## 架构
 
-### 内核只有五件东西
+### 内核只有七件东西
 
-`dugentx/kernel/` 里那五个模块构成了「可拔插」本身，它们不知道 Agent 是什么：
+`dugentx/kernel/` 里那七个模块构成了「可拔插」本身，它们不知道 Agent 是什么：
 
 | 模块 | 干什么 |
 |---|---|
 | `context.py` | 服务仓库。插件靠 `ctx.<key>` 拿服务，**从不 import 具体实现** |
-| `plugin.py` | 插件 = 名字 + 要用的服务（`inject`）+ 一段 `apply` |
+| `plugin.py` | 插件 = 名字 + 要用的服务（`inject`）+ 一段 `apply`，外加挂在工厂上的那份清单 |
+| `manifest.py` | 清单：一个插件**不执行也能被问**要什么、给什么、按哪版接口写的 |
+| `registry.py` | meta 接口：已安装插件包的名单；`plugin:` 怎么解析也住在这里 |
 | `effect.py` | 可撤销的副作用。每笔注册返回一个 disposer |
 | `events.py` | 事件总线，五种派发方式 |
 | `loader.py` | 读配置 → 校验 → 拓扑排序 → 实例化 |
+
+`manifest.py` 与 `registry.py` 是后加的一层：它们回答「装了哪些插件、各自要什么」，
+而**回答这些不需要执行插件的代码**。`dugentx plugins --available` 就是这一层的用处。
+为什么它必须是「声明」而不是「执行结果」，见 [设计思路](docs/architecture.md)。
 
 ### 能力缝：三个角色，缺一不可
 
@@ -79,11 +116,11 @@ uv run pytest -q                        # 全部测试离线跑，不需要 key
 
 只有接口没有实现是设计稿；只有实现没有消费者是死代码。
 
-**11 个缝：**
+**12 个缝：**
 
 | 缝 | 服务键 | 一句话 |
 |---|---|---|
-| `llm` | `ctx.llm` | 模型适配器注册表；唯一允许依赖 any-llm 的地方 |
+| `llm` | `ctx.llm` / `ctx.models` | 模型适配器注册表 + 运行期换模型；唯一允许依赖 any-llm 的地方 |
 | `tools` | `ctx.tools` | 工具注册表 + 四段执行管道 |
 | `agent` | `ctx.agents` / `ctx.agent` | 会话载体、回合与步的词汇 |
 | `session` | `ctx.session` | 只能追加的事件日志，以及从它投影出的模型历史 |
@@ -91,9 +128,38 @@ uv run pytest -q                        # 全部测试离线跑，不需要 key
 | `fs` | `ctx.fs` | 文件访问 + 路径策略 |
 | `shell` | `ctx.shell` | 命令执行，带超时与熔断 |
 | `permissions` | `ctx.permissions` / `ctx.approval` | 三档权限，开关在代码侧 |
+| `human` | `ctx.human` | 人机通道：终端、TUI、CI 自动回答都是它的实现 |
 | `compaction` | `ctx.compaction` | 上下文预算满了怎么办 |
 | `subagent` | `ctx.subagents` | 把一件事整个交出去 |
 | `skill` | `ctx.skills` | 按需加载的说明文档 |
+
+### 插件可以是模块，也可以是一个包
+
+配置里那一行写的是 `plugin:`。它有两种写法，判据是**注册表里有没有这个名字**，
+不是字符串里有没有点（`module:attr` 里的 module 完全可以是个不带点的顶层模块名）：
+
+```yaml
+plugin: dugentx.plugins.fs     # 仓库里的模块：import 它，取它的 create
+plugin: clock                  # 已安装的插件包：走 entry point 注册表
+```
+
+插件包就是一个正常的 Python 发行包，用一条 entry point 声明自己是插件：
+
+```toml
+[project.entry-points."dugentx.plugins"]
+clock = "dugentx_plugin_clock:PLUGIN"
+```
+
+被 `define_plugin` 装饰的那把工厂上挂着一份**清单**（要哪些服务、提供什么、按哪版插件接口写的），
+所以「装了哪些、各要什么」在**不执行插件代码**的前提下就是可问的：
+
+```bash
+uv run dugentx plugins --available    # 这台机器上装了哪些插件包（不读配置、不装载、不需要 key）
+```
+
+仓库里那份能跑的插件包在 `examples/dugentx-plugin-clock/`——一个 `now` 工具、一个 `clock` 服务、
+一段提示词；用它的配置是 `examples/plugin-package.yml`，整份文件只多了一行。自己怎么做一个，见
+[写一个插件](docs/writing-a-plugin.md) 第 6 节。
 
 ### 一个回合怎么走
 
@@ -129,7 +195,7 @@ turn/end
 ```
 tool/call
   tools/pre-execute   (waterfall)   ← 权限、白名单、参数校验、审计
-    tools/execute     (waterfall)   ← terminal 是工具自己的处理器
+    └─ 工具本身                      ← 不是事件，是 pre-execute 的最内层处理器
   tools/post-execute  (waterfall)   ← 脱敏、截断
 tool/result
 ```
@@ -181,6 +247,102 @@ manage_plugin(action="unmount", plugin_id="skill")              # 拔掉
 
 这不是没注意到，是一个取舍：为了让 `render` 保持同步，就得有人缓存。真要修，正确的做法是让 skill 插件在目录变化时主动刷新那份缓存，而不是把 `assemble()` 变成 async——后者会把异步传染给每一个段落，这个价钱不值。
 
+## 编码 TUI：它是长出来的，不是装上去的
+
+```bash
+uv run python examples/tui_demo.py     # 不需要 key，看一遍完整画面
+uv run dugentx tui                     # 真跑
+```
+
+它长这样：
+
+```
+DugentX
+  model=deepseek-flash  session=b0d7694f  tools=10
+  cwd=...\DugentX
+• 把 demo-note.txt 里的状态改成完成
+── step 0
+▸ 我先读一下这个文件。
+
+╭─ read_file  examples/workspace/demo-note.txt
+· read_file(path='examples/workspace/demo-note.txt')（只读，直接放行）
+│ ✓ read_file
+│   examples/workspace/demo-note.txt（共 2 行，显示 1-2）
+│   1	# 演示用的一行笔记
+│   2	状态：待办
+── step 1
+▸ 读到了，是一行待办。我把它改成完成状态。
+
+╭─ edit_file  examples/workspace/demo-note.txt  old=状态：待办  new=状态：完成
+同意：edit_file(path='examples/workspace/demo-note.txt', old='状态：待办', new='状态：完成')
+│ ✓ edit_file
+│   已在 examples/workspace/demo-note.txt 里替换 1 处
+--- examples/workspace/demo-note.txt
++++ examples/workspace/demo-note.txt
+@@ -1,2 +1,2 @@
+ # 演示用的一行笔记
+-状态：待办
++状态：完成
+── step 2
+▸ 改完了。diff 在上面——你看到的就是这个 TUI 存在的理由。
+
+── turn completed  steps=3  tools=2  tokens=0
+```
+
+### 它为什么能「原样长出来」
+
+因为**「跟人说话」这件事本来就不该由审批逻辑决定**。
+
+原来的写法是审批自己去读 stdin。一旦界面换成 TUI，这条线就断了：TUI 有自己的输入行、自己的键位、自己的重绘节奏，它不可能让审批去调 `input()`。
+
+所以第 12 条缝就是这件事本身：
+
+```
+permissions 缝  ──依赖──▶  human 缝  ◀──实现──  stdio 通道 / TUI 通道
+（决定要不要问）           （只负责问）          （怎么问是它的自由）
+```
+
+于是「加一个编码 TUI」的全部改动是这个：
+
+```yaml
+# dugentx.tui.yml —— 整份文件就这些
+extends: dugentx.yml
+patch:
+  - id: human
+    disabled: true          # 不再用 stdio 通道
+  - id: tui
+    plugin: dugentx.plugins.tui
+```
+
+**循环没改、工具管道没改、审批一行没改。** `tests/test_tui_app.py` 里有几条测试专门盯着这件事：它从真实的 `dugentx.tui.yml` 读配置、`AgentRuntime.boot()` 起来，断言换掉的只有 `ctx.human` 的实现，其余服务一个不少。
+
+### 包里的四件东西，以及为什么是四件
+
+| 文件 | 管什么 |
+|---|---|
+| `terminal.py` | 终端本身：按平台切原始模式、解析按键、ANSI 与配色 |
+| `render.py` | 把一次事件画成几行字（流式正文、工具卡、diff、状态行） |
+| `paint.py` | 订阅事件，翻译成 `render` 的调用 |
+| `app.py` | 主循环：读一行、跑一个回合、再来一次 |
+
+后两个分开，是因为**显示和输入本来就是两件事**：没有输入循环的时候（跑脚本、跑测试），画面照样应该更新。
+
+`paint.py` 里有一个决定值得单说：**diff 不是从工具输出里解析出来的。** 工具的输出是给模型看的，它随时可能改写法；而且在执行前读一遍文件、执行后再读一遍，拿到的永远是事实。所以画师在 `tools/pre-execute` 上拍快照，在 `tools/post-execute` 上对比——两个都是 waterfall，都会被 await，顺序也就确定了。
+
+### 一个界面如果只能靠手敲才算测过，那它等于没测
+
+`terminal.py` 的输入侧是一个可注入的 `KeyReader`：真终端用 `StdioKeyReader`（Windows `msvcrt` / POSIX `termios`，含东亚宽字符与代理对），测试用 `ScriptedKeyReader`。输出侧是一个可注入的 `Screen`。
+
+所以 `tests/test_tui_app.py` 能这样写，而且不需要终端：
+
+```python
+keys = ScriptedKeyReader(["你好", "[enter]", "[eof]"])
+local = TuiApp(ctx, screen=Screen(StringIO(), color=False), keys=keys, renderer=Renderer(screen))
+await local.run()
+```
+
+含中文输入、Ctrl-W 整词删除、方向键翻历史、宽字符按列计算光标——这些都离线跑。
+
 ## 无 key 也能跑一遍完整流程
 
 ```bash
@@ -227,19 +389,27 @@ uv run dugentx -c dugentx.replay.yml run "读一下 hello.txt，然后教我怎�
 ```
 dugentx/
   kernel/        可拔插本身：context / plugin / effect / events / loader
-  seams/         11 个能力缝的服务定义（只有接口与词汇）
-  providers/     实现：any-llm 适配器、回放适配器、本地 fs / shell、压缩、子 Agent、技能
-  tools/         模型可调用的工具（fs / shell / skill / subagent）
+  seams/         12 个能力缝的服务定义（只有接口与词汇）
+  providers/     实现：any-llm 适配器、回放适配器、本地 fs / shell、人机通道、压缩、子 Agent、技能
+  tools/         模型可调用的工具（fs / shell / skill / subagent / ask_human）
   plugins/       把服务与工具接起来的装载单元
+  tui/           编码 TUI：terminal / render / paint / app
   events.py      事件目录
   runtime.py     开机：组合 → 插件树 → agent
   cli.py         命令行
 examples/
   skills/        两个真能用的技能示例
+  tui_demo.py    无 key 看一遍 TUI
+  workspace/     演示用的工作区
 tests/           全部离线，不需要 key
-dugentx.yml      真实组合（any-llm）
-dugentx.replay.yml  无 key 演示组合（回放）
+dugentx.yml          默认组合（DeepSeek + stdio 人机通道）
+dugentx.tui.yml      编码 TUI：extends 上面那份，只改一行
+dugentx.replay.yml   无 key 演示组合（回放适配器）
 ```
+
+配置支持 `extends`：基座的插件行先来，自己的追加在后，最后统一应用 `patch`。
+**「换一个人机通道」这件事只值两行 patch**，不需要复制整份配置——
+复制出来的两份会各自漂移，那是配置最容易烂掉的方式。
 
 ---
 
@@ -260,7 +430,7 @@ dugentx.replay.yml  无 key 演示组合（回放）
 | dsh | DugentX | 为什么 |
 |---|---|---|
 | Cordis 的 `inject` 是响应式的，服务晚到会等待唤醒 | 装载前拓扑排序，缺服务**在装载时大声失败** | 少一个响应式调度器，换来一条更好查的规则：跑到一半才发现缺服务，说明配置写错了 |
-| profile → bundle → patch 三层叠加 | 一份 `plugins` 列表 + 按 id 的 `patch` | 示例体量下，一层已经能表达「换 adapter」「关一个工具」「改一行配置」这三件真会发生的事 |
+| profile → bundle → patch 三层叠加 | `extends` + 一份 `plugins` 列表 + 按 id 的 `patch` | 两层已经能表达「换 adapter」「关一个工具」「换一个人机通道」；再多的层，配置会先于代码变得难懂 |
 | 几十个包，每个缝一个可安装包 | 一个包，按缝分模块 | 让新人一个下午能读完 |
 | 会话格式有版本与迁移链 | JSONL，一行一个事件 | 迁移机制的价值在跨版本兼容，这里没有历史包袱要背 |
 
@@ -276,23 +446,37 @@ dugentx.replay.yml  无 key 演示组合（回放）
 2. `dugentx/kernel/events.py` 的 `waterfall` —— 理解中间件怎么写。然后跑 `dugentx events` 看真实的目录。
 3. `dugentx/providers/agent_loop_basic.py` —— 循环本体，一行一行对照上面那张 turn/step 图。
 4. `dugentx/seams/tools.py` —— 四段管道。然后看 `dugentx/seams/permissions.py` 怎么用 `tools/pre-execute` 把权限插进去，一行都不用改工具。
-5. `dugentx/plugins/self_extension.py` —— 最后再读这个。它把前面所有东西串起来：为什么注册必须可撤销、为什么事件名要校验、为什么挂载要进日志。
+5. `dugentx/plugins/self_extension.py` —— 它把前面所有东西串起来：为什么注册必须可撤销、为什么事件名要校验、为什么挂载要进日志。
+6. `dugentx/seams/human.py` + `dugentx/plugins/tui.py` —— 最后读这两个。它们回答的是「为什么加一个界面没有动 harness」：因为「跟人说话」本来就是一条缝，而不是审批逻辑里的一个 `input()`。
 
-想动手的话，`README` 里没有列、但很容易加的三个练习：
+想动手的话，这几个练习都不大，而且每一个都强制你去用它对应的那条缝：
 
-- 加一个 `web_fetch` 工具（`network` 标签，走 `tools/pre-execute` 的确认）
-- 把 `ctx.agentLoop` 换成并行工具调用的版本
+- 加一个 `web_fetch` 工具（打 `network` 标签，确认会自己从 `tools/pre-execute` 上长出来）
+- 把 `ctx.agentLoop` 换成并行工具调用的版本——只换一个服务，别的都不动
 - 写一个新的 `Compactor`，用检索而不是截断
+- 写一个新的 `HumanChannel`：比如把所有提问转发到一个 webhook，让审批在手机上点。**`ctx.human` 是唯一要动的东西。**
+- 把自己的插件做成一个**包**：一条 entry point 加一份清单，然后 `dugentx plugins --available` 就该列出它。模板是 `examples/dugentx-plugin-clock/`，配置侧只写包名。
+- 给 TUI 加一个「思考链」开关：`Delta.reasoning` 已经在流里了，`paint.py` 现在故意丢掉它
 
 ---
 
 ## 开发
 
 ```bash
-uv run pytest -q                    # 全部离线
-uv run ruff check .                 # 静态检查
+uv sync --all-extras                 # 装齐 dev + tui 两组可选依赖
+uv run pytest -q                     # 302 passed，全程离线，不需要 key
+uv run ruff check .                  # 静态检查
 uv run python scripts/check_boundaries.py   # 把两条硬规则变成断言
+uv run python scripts/gen_docs.py --check   # docs/events.md 有没有落后于事件目录
 ```
+
+> [!warning] `uv sync --extra tui` 会顺手把 dev 卸掉
+> 可选依赖是**按次声明**的：只写 `--extra tui` 就等于「只要这一组」，
+> `pytest` / `ruff` 会被移除。而 `uv run pytest` 在这之后**不会报「没装 pytest」**——
+> 它会去 PATH 上找一个系统的 pytest，然后因为那个环境里没有 dugentx 而报
+> `ModuleNotFoundError: No module named 'dugentx'`。错误信息指向你的代码，问题却在依赖组。
+>
+> 要么写 `uv sync --all-extras`，要么把两组都列上：`uv sync --extra dev --extra tui`。
 
 ### 边界可以被检查，而不是只能被相信
 

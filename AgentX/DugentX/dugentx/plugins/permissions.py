@@ -13,7 +13,8 @@
 
 - `levels`：标签 → 档位 的覆盖，例如 `{"write": "auto"}`。
 - `default`：没有标签的工具算哪一档，默认 `confirm`。
-- `mode`：`"policy"`（默认，按答案表回答）或 `"interactive"`（在终端上问）。
+- `mode`：`"policy"`（按答案表回答）/ `"interactive"`（在终端上问）
+  / `"channel"`（走 human 缝问人——TUI 与 stdio 通道都从这儿进来）。
 - `answers`：policy 模式下每个档位的答案，写成 `refuse` / `allow`（也接受
   `true` / `false`），例如 `{"auto": allow, "confirm": allow, "deny": refuse}`。
 - `tool_overrides`：按工具名的个别答案，例如 `{"run_command": refuse}`。
@@ -32,6 +33,7 @@ from typing import Any
 from dugentx.kernel.context import Context
 from dugentx.kernel.errors import PluginError
 from dugentx.kernel.plugin import define_plugin
+from dugentx.providers.approval_channel import ChannelApproval
 from dugentx.providers.approval_interactive import InteractiveApproval
 from dugentx.providers.approval_policy import DEFAULT_ANSWERS, ArgumentRule, PolicyApproval
 from dugentx.seams.permissions import Level, PermissionPolicy, install_gate
@@ -106,7 +108,7 @@ def create(ctx: Context, config: dict[str, Any]) -> None:
         policy.levels[str(label)] = _level(value, f"levels.{label}")
 
     mode = str(config.get("mode", "policy"))
-    approval: PolicyApproval | InteractiveApproval
+    approval: PolicyApproval | InteractiveApproval | ChannelApproval
     if mode == "policy":
         approval = PolicyApproval(
             answers={
@@ -123,8 +125,15 @@ def create(ctx: Context, config: dict[str, Any]) -> None:
             _level(key, f"answers.{key}")
     elif mode == "interactive":
         approval = InteractiveApproval()
+    elif mode == "channel":
+        # 「问人」这件事交给 human 缝。**通道是 lazy 取的**：装载顺序由
+        # inject 推导，但审批只在真要问的时候才需要人。晚一点拿，
+        # 配置里就不用为了顺序操心——而且 TUI 通道也能在同一个位置被换上来。
+        approval = ChannelApproval(lambda: ctx.get("human"), events=ctx.events)
     else:
-        raise PluginError(f"permissions 的 mode 只能是 'policy' 或 'interactive'，收到 {mode!r}")
+        raise PluginError(
+            f"permissions 的 mode 只能是 'policy' / 'interactive' / 'channel'，收到 {mode!r}"
+        )
 
     ctx.provide("permissions", policy)
     ctx.provide("approval", approval)

@@ -26,8 +26,12 @@ import yaml
 from dugentx import __version__
 from dugentx.events import describe_events
 from dugentx.kernel.errors import DuGentXError
+from dugentx.kernel.registry import installed_registry
 from dugentx.runtime import DEFAULT_CONFIG, AgentRuntime
 from dugentx.seams.agent import TurnResult
+
+TUI_CONFIG = "dugentx.tui.yml"
+"""`dugentx tui` 默认读的配置。和 DEFAULT_CONFIG 分开，原因见 `_config_for`。"""
 
 # ------------------------------------------------------------------ 输出
 
@@ -99,6 +103,48 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         await runtime.stop()
 
 
+def _config_for(args: argparse.Namespace, preferred: str) -> str | None:
+    """挑一份配置：命令行给的优先，否则用这个子命令最合身的那份。
+
+    为什么需要这个：`dugentx tui` 如果按全局默认去读 `dugentx.yml`，
+    那份配置里**没有 tui 插件**——于是最自然的命令会得到一句
+    「这次组合里没有 tui 插件」。这不是安全边界，是纯粹的绊脚石。
+
+    TUI 和 run/chat 用的不是同一份组合（前者要装界面和它的画师，
+    后者不要），所以默认值按子命令分开。`--config` 永远优先。
+    """
+    if args.config:
+        return str(args.config)
+    candidate = Path(preferred)
+    return str(candidate) if candidate.exists() else None
+
+
+async def _cmd_tui(args: argparse.Namespace) -> int:
+    """起一个编码 TUI。
+
+    它和 `chat` 的区别不是「更好看」，而是**审批弹在界面里**：
+    写操作会停下来问你一句，而那一句就在同一个终端、同一套键位里——
+    因为它走的是 human 缝，不是 stdin。
+    """
+    runtime = AgentRuntime.boot(_config_for(args, TUI_CONFIG), cwd=Path.cwd())
+    await runtime.start()
+    try:
+        if not runtime.ctx.has("tui"):
+            print(
+                f"dugentx: 这次组合（{runtime.composition.source}）里没有 tui 插件。\n"
+                f"把它加进配置就能长出来：\n\n"
+                f"  - id: tui\n"
+                f"    plugin: dugentx.plugins.tui\n\n"
+                f"或者直接用仓库里那份：uv run dugentx -c {TUI_CONFIG} tui\n",
+                file=sys.stderr,
+            )
+            return 2
+        app = runtime.ctx.service("tui")
+        return int(await app.run(once=args.once))
+    finally:
+        await runtime.stop()
+
+
 async def _cmd_chat(args: argparse.Namespace) -> int:
     runtime = AgentRuntime.boot(args.config, cwd=Path.cwd())
     await runtime.start()
@@ -119,13 +165,54 @@ async def _cmd_chat(args: argparse.Namespace) -> int:
         await runtime.stop()
 
 
-async def _cmd_plugins(args: argparse.Namespace) -> int:
-    """真的把插件装一遍再打印。
+def _print_available() -> int:
+    """列出这台机器上装了哪些插件包。**不装载任何东西**，所以不需要 key。"""
+    manifests = installed_registry().manifests()
+    if not manifests:
+        print("没有发现任何已安装的插件包。")
+        print()
+        print("插件包通过标准 entry point 接入，组名是 dugentx.plugins：")
+        print()
+        print('  [project.entry-points."dugentx.plugins"]')
+        print('  word-count = "dugentx_word_count:PLUGIN"')
+        print()
+        print("装好之后配置里写它的名字即可：")
+        print()
+        print("  - id: word-count")
+        print("    plugin: word-count")
+        print()
+        print("照旧也可以让配置直接指向仓库里的模块（`包.模块:属性`）——")
+        print("那条路不需要插件包，仓库自己那十几个插件就是这么接的。")
+        return 0
 
-    只是「读配置算一下顺序」是不够的：这张表的用处是回答
-    「现在到底有什么能用」。装一遍才知道——而且如果装不上，
-    那个错误本身就是你要看的东西。
+    print(f"已安装的插件包（{len(manifests)} 个）：")
+    incompatible = 0
+    for manifest in manifests:
+        print(f"  {manifest.describe()}")
+        source = f"来自 {manifest.distribution}" if manifest.distribution else "（没有来源信息）"
+        print(f"      {manifest.target}  {source}")
+        if not manifest.compatible:
+            incompatible += 1
+    if incompatible:
+        print()
+        print(f"其中 {incompatible} 个的插件接口版本和本机对不上，装载它们会失败。")
+        return 1
+    return 0
+
+
+async def _cmd_plugins(args: argparse.Namespace) -> int:
+    """看插件。
+
+    两种问法回答两件不同的事，所以它们要的东西也不一样：
+
+    - 默认（`dugentx plugins`）：**这份配置装出来是什么样**。真的装一遍，
+      所以配置里声明的密钥必须就位；装不上时那句错误本身就是你要看的东西。
+    - `--available`：**这台机器上装了哪些插件包**。只读注册表和清单，
+      不装载、不需要配置、不需要 key。
     """
+    if args.available:
+        return _print_available()
+
     runtime = AgentRuntime.boot(args.config, cwd=Path.cwd())
     await runtime.start()
     try:
@@ -229,7 +316,16 @@ def build_parser() -> argparse.ArgumentParser:
     chat = sub.add_parser("chat", help="多轮对话")
     chat.set_defaults(func=_cmd_chat)
 
+    tui = sub.add_parser("tui", help="起一个编码 TUI")
+    tui.add_argument("--once", default=None, help="只跑一个回合然后退出，用于脚本化")
+    tui.set_defaults(func=_cmd_tui)
+
     plugins = sub.add_parser("plugins", help="看这次装了哪些插件")
+    plugins.add_argument(
+        "--available",
+        action="store_true",
+        help="只看这台机器装了哪些插件包（不装载配置，不需要 key）",
+    )
     plugins.set_defaults(func=_cmd_plugins)
 
     replay = sub.add_parser("replay", help="把一个会话日志重新投影一遍")

@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any
 
 from dugentx.kernel.context import Context
+from dugentx.kernel.errors import PluginError
 from dugentx.kernel.plugin import define_plugin
 from dugentx.seams.agent import AgentConfig, AgentRegistry
 
@@ -41,7 +42,12 @@ def config_from(raw: dict[str, Any]) -> AgentConfig:
     }
     unknown = set(raw) - known
     if unknown:
-        raise ValueError(f"agent 配置里有不认识的键：{sorted(unknown)}；可用：{sorted(known)}")
+        # 必须是 PluginError（DuGentXError 的子类），不能是 ValueError：
+        # CLI 只接 DuGentXError，抛 ValueError 的后果是用户拼错一个键名，
+        # 看到的是一段栈回溯和退出码 1，而不是那一行「dugentx: …」。
+        raise PluginError(
+            f"agent 配置里有不认识的键：{sorted(unknown)}；可用：{sorted(known)}"
+        )
     return AgentConfig(
         model=str(raw.get("model", "")),
         max_steps=int(raw.get("max_steps", 24)),

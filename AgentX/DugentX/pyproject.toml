@@ -12,11 +12,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# 抓网页工具用；不装也能跑，只是没有 web_fetch
+# 开发这个仓库要用的东西：pytest / ruff。
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "ruff>=0.6",
+]
+# 编码 TUI 要用的东西。**故意是可选依赖**：核心的 run / plugins / 循环
+# 都不需要它，只有那个交互界面需要。装了才会有好看的界面，
+# 不装时会得到一句「请先 uv sync --extra tui」，而不是一段 ImportError。
+tui = [
+    "textual>=8.2.8",
 ]
 
 [project.scripts]
@@ -44,3 +50,16 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 # 这个项目的注释和文档本来就是中文，这几条规则会把每一行中文都报一遍。
 # 关掉它们，其余规则照常。
 ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.uv.workspace]
+members = [
+    "examples/dugentx-plugin-clock",
+]
+
+[tool.uv.sources]
+dugentx-plugin-clock = { workspace = true, editable = true }
+
+[dependency-groups]
+dev = [
+    "dugentx-plugin-clock",
+]

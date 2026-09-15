@@ -31,8 +31,9 @@ from typing import Any
 from dugentx.kernel.context import Context
 from dugentx.kernel.errors import PluginError
 from dugentx.kernel.plugin import define_plugin
-from dugentx.providers.llm_anyllm import AnyLlmAdapter
+from dugentx.providers.llm_anyllm import AnyLlmAdapter, available_providers
 from dugentx.providers.llm_replay import ReplayAdapter
+from dugentx.providers.model_switch import ModelSwitcher
 from dugentx.seams.llm import LlmAdapter, LlmRegistry
 
 
@@ -101,7 +102,7 @@ def _optional_int(value: Any, field: str) -> int | None:
 
 @define_plugin(
     "llm",
-    provides=("llm",),
+    provides=("llm", "models"),
     description="模型适配器注册表：anyllm（真实调用，唯一碰 any-llm 的地方）或 replay（离线回放）",
 )
 def create(ctx: Context, config: dict[str, Any] | None = None) -> None:
@@ -130,3 +131,10 @@ def create(ctx: Context, config: dict[str, Any] | None = None) -> None:
         lambda _ctx: registry.register(adapter, default=True), label=f"llm:adapter:{name}"
     )
     ctx.provide("llm", registry)
+
+    # 换模型的能力也挂在这一层：只有这里认识「适配器怎么造」和「provider 有哪些」。
+    # 界面（TUI 的选择器）只调用它，永远不自己造适配器——否则「换 provider 不改代码」
+    # 会从第一个选择器开始失效。
+    switcher = ModelSwitcher(ctx, build=ADAPTERS["anyllm"], providers=available_providers)
+    ctx.provide("models", switcher)
+    ctx.effect(lambda _ctx: switcher.dispose, label="llm:model-switch")

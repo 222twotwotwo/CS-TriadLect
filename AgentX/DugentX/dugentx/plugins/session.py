@@ -36,17 +36,23 @@ from dugentx.seams.session import JsonlSessionStore, SessionLog
 DEFAULT_DIRECTORY = Path(".dugentx") / "sessions"
 """默认放在工作目录下的隐藏目录里：会话日志是工作区的一部分，不是全局状态。"""
 
-FLUSH_ON: tuple[str, ...] = ("turn/end", "session/end")
+FLUSH_ON: tuple[str, ...] = ("turn/end",)
 """值得写盘的时刻。
 
 只挑回合边界，不挑每一个事件：一次 `save()` 是重写整个文件，粒度太细会让
 长会话白白多写几十兆；粒度太粗（只在退出时写）又会让崩溃带走一整段对话。
-回合结束是「一段完整的东西刚刚落定」的那个点。
+回合结束是「一段完整的东西刚刚落定」的那个点——**主会话的每一轮对话都必然
+以 `turn/end` 收尾**，所以这个清单只要它一个就够了。
 
-`session/start` **不在**这个清单里，这是被一次真实事故换来的：
-按启动就写盘的话，一条只想读东西的命令（`dugentx plugins`、`dugentx sessions`）
-每启动一次就会留下一个空会话文件——「我有几个会话」于是变成一个越问越错的数字。
-所以下面的 flush 还带一道闸：**没有 `turn/start` 就不写**。
+两个**故意不在**清单里的名字：
+
+- `session/start`：按启动就写盘的话，一条只想读东西的命令（`dugentx plugins`、
+  `dugentx sessions`）每启动一次就会留下一个空会话文件——「我有几个会话」于是
+  变成一个越问越错的数字。所以下面的 flush 还带一道闸：**没有 `turn/start` 就不写**。
+- `session/end`：它是**会话日志的种类**，不是总线事件（见 `dugentx/events.py`
+  里生命周期那一段）。总线根本不派发它，写在这里等于挂一个永远不触发的监听器；
+  而「收尾那一次」由下面的卸载 flush 负责。
+
 什么都没干的一次装载，不该在磁盘上留下痕迹。
 """
 

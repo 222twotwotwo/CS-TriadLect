@@ -183,10 +183,12 @@ async def test_a_boot_that_did_no_work_leaves_no_session_file(
     dispose = await ctx.mount(
         session_plugin({"directory": str(session_dir), "session_id": "idle"})
     )
-    ctx.events.emit("session/start", "main", "")  # 载荷按事件目录的字段顺序传
-    assert not session_store.path_for("idle").exists()
+    log = ctx.service("session")
+    # 只读命令留下的就是这个样子：头尾都在，但**从没出现过一轮对话**。
+    log.append("session/start", label="main", model="deepseek-flash")
+    log.append("session/end")
+    ctx.events.emit("turn/end", None)  # 连回合边界信号都来了，闸门依然该拦住
 
-    ctx.events.emit("session/end")
     assert not session_store.path_for("idle").exists()
 
     dispose()  # 卸载时的那次 flush 同样要过这道闸

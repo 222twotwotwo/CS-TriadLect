@@ -15,8 +15,6 @@ DugentX 保留「层」这个想法，但只留一层：一份配置列表 + 一
 
 from __future__ import annotations
 
-import importlib
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -26,7 +24,11 @@ import yaml
 from dugentx.kernel.errors import PluginError
 from dugentx.kernel.plugin import Plugin
 
-PluginFactory = Callable[[dict[str, Any]], Plugin]
+# 解析规则住在 `kernel/registry.py` —— 那是 meta 接口的所在，它同时管
+# 「已安装的插件包」（走 entry point）和「仓库里的模块」（走 import）。
+# 这里保留同名入口，是为了不让 `from dugentx.kernel.loader import resolve_factory`
+# 的那些调用方跟着搬家。
+from dugentx.kernel.registry import resolve_factory as resolve_factory
 
 
 @dataclass(slots=True)
@@ -70,28 +72,6 @@ class Composition:
             lines.append(f"  {index:>2}. {row.id:<16} 装 {plugin.name:<16} 需要[{inject}]")
             lines.append(f"      {row.plugin:<42} 提供[{provides}]")
         return "\n".join(lines)
-
-
-def resolve_factory(target: str) -> PluginFactory:
-    """把 `包.模块` 或 `包.模块:属性` 解析成一个插件工厂。"""
-    module_path, _, attr = target.partition(":")
-    try:
-        module = importlib.import_module(module_path)
-    except ImportError as exc:
-        raise PluginError(f"找不到插件模块 {module_path!r}：{exc}") from exc
-
-    if attr:
-        candidate = getattr(module, attr, None)
-        if candidate is None:
-            raise PluginError(f"{module_path!r} 里没有 {attr!r}")
-        return candidate  # type: ignore[no-any-return]
-
-    candidate = getattr(module, "create", None)
-    if candidate is None:
-        raise PluginError(
-            f"插件模块 {module_path!r} 既没有 `create`，也没在配置里指出 :属性 名"
-        )
-    return candidate  # type: ignore[no-any-return]
 
 
 def apply_patches(
@@ -170,6 +150,55 @@ def order_plugins(rows: list[PluginRow], plugins: list[Plugin]) -> list[int]:
     return order
 
 
+def _read_document(path: Path) -> dict[str, Any]:
+    """读一份 YAML 配置，确认顶层是映射。"""
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise PluginError(f"{path} 的顶层必须是一个映射，收到 {type(data).__name__}")
+    return data
+
+
+def _collect_rows(
+    path: Path, seen: tuple[Path, ...] = ()
+) -> tuple[list[PluginRow], list[dict[str, Any]]]:
+    """读一份配置，连同它 `extends` 的基座一起。
+
+    `extends` 是 dsh 的 profile / bundle / patch 三层叠法的一层化版本：
+    基座的插件行先来，自己的 `plugins` 追加在后面，最后统一应用 patch。
+    没有它，「换一个人机通道」就得把整份配置复制一遍——而复制出来的两份
+    会各自漂移，这正是配置最容易烂掉的方式。
+
+    只解析一层链，并且拒绝成环：配置里的环报出来是「a.yml extends b.yml
+    extends a.yml」，比一个栈溢出好查得多。
+    """
+    resolved = path.resolve()
+    if resolved in seen:
+        chain = " → ".join(str(p.name) for p in (*seen, resolved))
+        raise PluginError(f"配置 extends 成环：{chain}")
+    if len(seen) >= 8:
+        raise PluginError(f"配置 extends 太深（超过 8 层）：{path}")
+
+    data = _read_document(path)
+    base_rows: list[PluginRow] = []
+    base_patches: list[dict[str, Any]] = []
+
+    parent = data.get("extends")
+    if parent:
+        parent_path = (path.parent / str(parent)).resolve()
+        if not parent_path.exists():
+            raise PluginError(f"{path} 的 extends 指向了不存在的文件：{parent}")
+        base_rows, base_patches = _collect_rows(parent_path, (*seen, resolved))
+
+    own_rows = [
+        PluginRow.from_mapping(r, where=str(path))
+        for r in (data.get("plugins") or [])
+        if isinstance(r, dict)
+    ]
+    # 自己的 patch 在基座的 patch 之后应用，所以子配置能覆盖父配置改过的东西。
+    patches = [*base_patches, *[p for p in (data.get("patch") or []) if isinstance(p, dict)]]
+    return [*base_rows, *own_rows], patches
+
+
 def load_composition(
     path: str | Path | None = None,
     *,
@@ -180,16 +209,9 @@ def load_composition(
         rows: list[PluginRow] = []
         source = "（空配置）"
     else:
+        rows, patches = _collect_rows(Path(path))
         source = str(path)
-        text = Path(path).read_text(encoding="utf-8")
-        data = yaml.safe_load(text) or {}
-        if not isinstance(data, dict):
-            raise PluginError(f"{source} 的顶层必须是一个映射，收到 {type(data).__name__}")
-        raw_rows = data.get("plugins") or []
-        if not isinstance(raw_rows, list):
-            raise PluginError(f"{source} 的 `plugins` 必须是一个列表")
-        rows = [PluginRow.from_mapping(r, where=source) for r in raw_rows if isinstance(r, dict)]
-        rows = apply_patches(rows, list(data.get("patch") or []), where=source)
+        rows = apply_patches(rows, patches, where=source)
 
     if overrides:
         rows = apply_patches(rows, overrides, where="命令行覆盖")

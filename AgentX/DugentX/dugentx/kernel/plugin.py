@@ -13,6 +13,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from dugentx.kernel.manifest import PluginManifest
+
 # 这里**故意**不 import Context：
 # context.py 的 mount() 需要一个 Plugin，plugin.py 的类型别名只需要 Callable。
 # 互相 import 会成环，而这一层真的没有别的依赖需求——
@@ -50,6 +52,7 @@ def define_plugin(
     inject: tuple[str, ...] = (),
     provides: tuple[str, ...] = (),
     description: str = "",
+    version: str = "0.0.0",
 ) -> Callable[[Apply], Callable[..., Plugin]]:
     """把一个 `apply` 函数标记成插件工厂。
 
@@ -70,18 +73,30 @@ def define_plugin(
     """
 
     def decorate(apply: Apply) -> Callable[..., Plugin]:
+        resolved = description or (apply.__doc__ or "").strip().split("\n")[0]
+
         def factory(config: dict[str, Any] | None = None) -> Plugin:
             return Plugin(
                 name=name,
                 apply=apply,
                 inject=inject,
                 provides=provides,
-                description=description or (apply.__doc__ or "").strip().split("\n")[0],
+                description=resolved,
                 config=dict(config or {}),
             )
 
         factory.__name__ = name
         factory.__dugentx_plugin__ = True  # type: ignore[attr-defined]
+        # 清单是**声明**，所以它挂在工厂上、而不是在工厂里：注册表读它的时候
+        # 不会调用这把工厂，于是「这个插件要什么、给什么、按哪版接口写的」
+        # 在装载之前就是可问的——这正是插件包能被预先检查的原因。
+        factory.__dugentx_manifest__ = PluginManifest(  # type: ignore[attr-defined]
+            name=name,
+            version=version,
+            description=resolved,
+            inject=inject,
+            provides=provides,
+        )
         return factory
 
     return decorate

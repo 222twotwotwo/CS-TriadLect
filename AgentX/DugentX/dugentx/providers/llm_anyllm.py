@@ -38,6 +38,17 @@ OpenAI 家族的流只有带上它，才会在最后一片里给出 token 用量
 """
 
 
+def available_providers() -> list[str]:
+    """any-llm 认得的全部 provider 名，排序。
+
+    放在这个文件里只有一个理由：**只有这里能 import `any_llm`**。
+    想列出「可选 provider」的界面（编码 TUI 的 provider 选择器、`dugentx models`）
+    必须通过 `ctx.models.providers()` 拿这份清单，而不是自己 import 一遍——
+    否则「换 provider 不改代码」这句话，第一个选择器就会把它变成假话。
+    """
+    return sorted(provider.value for provider in any_llm.LLMProvider)
+
+
 class AnyLlmAdapter:
     """`LlmAdapter` 的默认实现：harness 的一次请求 → any-llm 的一条流。
 

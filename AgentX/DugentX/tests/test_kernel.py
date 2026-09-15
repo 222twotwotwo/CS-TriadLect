@@ -327,14 +327,66 @@ def test_two_plugins_cannot_declare_the_same_service() -> None:
         order_plugins(rows, plugins)
 
 
-def test_missing_config_file_is_not_an_error_but_a_missing_row_field_is(tmp_path) -> None:
-    composition = load_composition(None)
-    assert composition.plugins == []
+def test_loader_extends_layers_a_base_config(tmp_path) -> None:
+    """`extends` 是「换一个人机通道」不必复制整份配置的原因。
 
-    bad = tmp_path / "bad.yml"
-    bad.write_text("plugins:\n  - config: {}\n", encoding="utf-8")
+    复制出来的两份会各自漂移——那是配置最容易烂掉的方式。
+    """
+    (tmp_path / "base.yml").write_text(
+        "plugins:\n  - id: tools\n    plugin: dugentx.plugins.tools\n", encoding="utf-8"
+    )
+    (tmp_path / "child.yml").write_text(
+        "extends: base.yml\n"
+        "plugins:\n  - id: human\n    plugin: dugentx.plugins.human\n",
+        encoding="utf-8",
+    )
+
+    composition = load_composition(tmp_path / "child.yml")
+
+    assert [row.id for row in composition.rows] == ["tools", "human"]
+
+
+def test_a_child_patch_can_disable_a_base_row(tmp_path) -> None:
+    (tmp_path / "base.yml").write_text(
+        "plugins:\n"
+        "  - id: tools\n    plugin: dugentx.plugins.tools\n"
+        "  - id: human\n    plugin: dugentx.plugins.human\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "child.yml").write_text(
+        "extends: base.yml\n"
+        "patch:\n"
+        "  - id: human\n    disabled: true\n"
+        "  - id: tui\n    plugin: dugentx.plugins.tui\n"
+        "    inject: []\n",
+        encoding="utf-8",
+    )
+
+    composition = load_composition(tmp_path / "child.yml")
+
+    assert [row.id for row in composition.rows] == ["tools", "tui"]
+
+
+def test_extends_a_missing_file_fails_loud(tmp_path) -> None:
+    (tmp_path / "child.yml").write_text("extends: nowhere.yml\n", encoding="utf-8")
+    with pytest.raises(PluginError) as info:
+        load_composition(tmp_path / "child.yml")
+    assert "nowhere.yml" in str(info.value)
+
+
+def test_extends_detects_a_cycle_instead_of_recurring_forever(tmp_path) -> None:
+    """配置里的环报出来是「a extends b extends a」，比栈溢出好查得多。"""
+    (tmp_path / "a.yml").write_text("extends: b.yml\n", encoding="utf-8")
+    (tmp_path / "b.yml").write_text("extends: a.yml\n", encoding="utf-8")
+
+    with pytest.raises(PluginError) as info:
+        load_composition(tmp_path / "a.yml")
+    assert "成环" in str(info.value)
+
+
+def test_plugin_row_rejects_a_row_without_id() -> None:
     with pytest.raises(PluginError):
-        load_composition(bad)
+        PluginRow.from_mapping({"plugin": "x"}, where="test")
 
 
 class _FakeTools:

@@ -1,15 +1,20 @@
 """tools 缝 —— 服务定义与执行管道。
 
 模型会「请求」调用工具，但**执行权在 harness 手里**。这条区分如果只是
-一句话，它就什么也不是；DugentX 把它落成一个四段管道：
+一句话，它就什么也不是；DugentX 把它落成一条管道：
 
 ```
 tool/call                      （通知：模型请求了一次调用）
   tools/pre-execute            （waterfall：策略层。可以改写、可以拦、可以拒绝）
-    tools/execute              （waterfall，terminal 是工具自己的处理器）
+    └─ 工具本身                 （不是事件，是 pre-execute 的 terminal 处理器）
   tools/post-execute           （waterfall：结果后处理、脱敏、截断）
 tool/result                    （通知：结果已经回填）
 ```
+
+工具本身的执行**不是事件**，而是 `pre-execute` 这个瀑布的最内层处理器。
+这个位置是有讲究的：只有当执行处在瀑布内层，某个监听器不去调 `nxt()`
+才真的能拦下它。所以想包住执行，就订阅 `pre-execute` 或 `post-execute`——
+不需要第三个钩子。
 
 权限（permissions 缝）、沙箱、审计、结果裁剪全都挂在 `tools/pre-execute`
 上面——**没有一个工具需要知道这些政策存在**。这就是「插件，而不是改循环」。

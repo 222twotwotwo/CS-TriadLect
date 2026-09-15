@@ -1,0 +1,38 @@
+# 编码 TUI 的组合。
+#
+# 整份文件只有一件事：**把「谁在跟人说话」那一行换掉。**
+#
+# 这就是「原样生长」的意思。加一个 TUI 没有改循环、没有改工具管道、
+# 没有给审批加分支——审批早就知道要「问一句」，它只是不知道那一句
+# 弹在哪儿。human 缝把它和界面解耦了，所以换界面就是换一行配置。
+#
+#   uv run dugentx -c dugentx.tui.yml tui
+#
+# 装界面本身要 textual（可选依赖）：
+#
+#   uv sync --extra tui
+#
+# 没装它也能用同一条命令跑一个回合（输出是一行行纯文本，不需要任何界面库）：
+#
+#   uv run dugentx -c dugentx.tui.yml tui --once "看看这个目录里有什么"
+#
+# 想换回最朴素的终端问答，把下面这两条 patch 删掉即可。
+
+extends: dugentx.yml
+
+patch:
+  # stdio 通道和 TUI 通道提供的是同一个服务键（ctx.human），
+  # 一个进程里只能有一个：同时有两张嘴问同一个人，只会把问题问乱。
+  - id: human
+    disabled: true
+
+  # 这一行就是全部的新增。它提供 ctx.human（TUI 通道）和 ctx.tui（界面本身）。
+  - id: tui
+    plugin: dugentx.plugins.tui
+    config:
+      # 输入框的占位提示前缀。它不改变任何行为，只是让那一行看得懂。
+      prompt: "› "
+      show_banner: true
+      # 记住多少条历史输入（↑ / ↓ 翻）。够了就行——这是给人按上箭头用的，
+      # 不是审计日志；真正的记录在会话 JSONL 里。
+      history_limit: 200

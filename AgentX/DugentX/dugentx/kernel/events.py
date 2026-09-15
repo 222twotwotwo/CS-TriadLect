@@ -34,6 +34,14 @@ Listener = Callable[..., Any]
 WATERFALL = "waterfall"
 """标记：这个监听器要按 waterfall 语义调用（额外收到一个 next）。"""
 
+ALLOWED_MODES: frozenset[str] = frozenset({"emit", "waterfall", "parallel", "serial", "bail"})
+"""内核认识的派发方式。
+
+写成常量而不是散在校验里，因为它是**公共契约的一部分**：
+校验、文档生成器、以及任何想知道「一共有几种」的东西都该读同一个集合。
+两边各写一份的话，加第五种时总有一边会忘。
+"""
+
 
 @dataclass(slots=True)
 class _Registration:
@@ -195,5 +203,5 @@ class EventSpec:
     payload: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        if self.mode not in {"emit", "waterfall", "parallel", "serial", "bail"}:
+        if self.mode not in ALLOWED_MODES:
             raise DuGentXError(f"未知的派发方式：{self.mode}")

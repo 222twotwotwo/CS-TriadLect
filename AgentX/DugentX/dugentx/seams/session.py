@@ -43,6 +43,7 @@ EventKind = Literal[
     "plugin/mounted",
     "plugin/unmounted",
     "skill/loaded",
+    "model/switched",
     "session/end",
 ]
 
